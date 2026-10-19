@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>탄성력 탐구실</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{
+  --bg:#f3f7ff; --card:#ffffff; --ink:#1f2a44; --sub:#5b6785; --line:#d9e2f2;
+  --pri:#4f6bff; --pri2:#7b5cff; --ok:#16a34a; --okbg:#e7f8ee; --bad:#e11d48; --badbg:#fde8ee;
+  --warn:#f59e0b; --spring:#ff7a1a; --skin:#ffd5b0; --wood:#9a6233;
+  --r:20px; --shadow:0 8px 24px rgba(40,60,120,.12);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif;font-size:20px;line-height:1.55;min-height:100vh;display:flex;flex-direction:column}
+button{font-family:inherit;font-size:19px;cursor:pointer;border:none;border-radius:14px;padding:12px 20px;font-weight:700;transition:transform .08s,filter .15s}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,textarea{font-family:inherit;font-size:20px;border:2px solid var(--line);border-radius:14px;padding:12px 14px;width:100%;background:#fff;color:var(--ink)}
+input:focus,textarea:focus{outline:none;border-color:var(--pri)}
+.btn-pri{background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;box-shadow:0 4px 12px rgba(79,107,255,.35)}
+.btn-sub{background:#e9eefc;color:var(--pri)}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-bad{background:var(--bad);color:#fff}
+.btn-ghost{background:transparent;color:var(--sub);padding:8px 12px;font-size:16px}
+.hidden{display:none!important}
+
+/* header */
+header{background:linear-gradient(135deg,#4f6bff,#8b5cf6);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header h1{font-family:'Jua',sans-serif;font-weight:400;font-size:32px;margin:0;flex:1;min-width:220px}
+.chip{background:rgba(255,255,255,.2);border-radius:999px;padding:6px 16px;font-weight:700;font-size:18px}
+header .hbtn{background:rgba(255,255,255,.18);color:#fff;font-size:16px;padding:8px 14px}
+.tabs{display:flex;gap:10px;padding:14px 20px 0;max-width:1240px;width:100%;margin:0 auto}
+.tab{flex:1;background:#dfe6f8;color:var(--sub);font-size:22px;padding:16px;border-radius:18px 18px 0 0;font-family:'Jua',sans-serif;font-weight:400}
+.tab.active{background:var(--card);color:var(--pri);box-shadow:0 -4px 14px rgba(40,60,120,.08)}
+.tab .lock{font-size:16px;margin-left:6px}
+main{flex:1;max-width:1240px;width:100%;margin:0 auto;padding:0 20px 20px}
+.panel{background:var(--card);border-radius:0 0 var(--r) var(--r);box-shadow:var(--shadow);padding:22px;min-height:400px;position:relative}
+.locked{text-align:center;padding:90px 20px;color:var(--sub)}
+.locked .big{font-size:70px}
+.locked h2{font-family:'Jua',sans-serif;font-weight:400;font-size:32px;color:var(--ink);margin:10px 0}
+
+/* practice */
+.p-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:22px}
+@media (max-width:900px){.p-grid{grid-template-columns:1fr}}
+.stage{background:#fbfdff;border:3px solid var(--line);border-radius:18px;overflow:hidden;position:relative}
+#pCanvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}
+.dots{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.dot{width:46px;height:46px;border-radius:50%;background:#e9eefc;color:var(--sub);font-size:19px;padding:0;font-weight:900}
+.dot.cur{outline:4px solid var(--pri);outline-offset:2px}
+.dot.done{background:var(--ok);color:#fff}
+.dot.rev{background:var(--warn);color:#fff}
+.q-title{font-family:'Jua',sans-serif;font-size:30px;margin:0 0 6px;color:var(--pri)}
+.q-sit{font-size:21px;margin:0 0 12px}
+.q-task{background:#eef2ff;border-left:6px solid var(--pri);border-radius:12px;padding:14px 16px;font-size:22px;font-weight:700}
+.q-task .target{color:#16a34a}
+.howto{color:var(--sub);font-size:17px;margin-top:8px}
+.fb{margin-top:14px;border-radius:14px;padding:14px 16px;font-size:20px;min-height:60px}
+.fb.ok{background:var(--okbg);color:#14532d;border:2px solid #86efac}
+.fb.bad{background:var(--badbg);color:#881337;border:2px solid #fda4af}
+.fb.info{background:#f1f5f9;color:var(--sub)}
+.p-btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.rule{margin-top:18px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:3px dashed #fb923c;border-radius:18px;padding:18px;font-size:22px;text-align:center}
+.rule b{color:#c2410c}
+
+/* wall */
+.w-form{background:#f8faff;border:3px dashed #c7d2fe;border-radius:18px;padding:20px;margin-bottom:24px}
+.w-form h2,.w-head h2{font-family:'Jua',sans-serif;font-weight:400;font-size:28px;margin:0 0 6px}
+.w-row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:800px){.w-row{grid-template-columns:1fr}}
+.field{margin:12px 0}
+.field label{display:block;font-weight:700;margin-bottom:6px}
+.field .hint{font-size:16px;color:var(--sub);margin-top:4px}
+.photo-drop{border:3px dashed #a5b4fc;border-radius:16px;background:#fff;padding:26px;text-align:center;color:var(--sub)}
+.photo-drop label{display:inline-block;margin:6px}
+#editCanvas{width:100%;height:auto;display:block;border-radius:12px;touch-action:none;cursor:crosshair;background:#eee}
+.warnbox{background:#fff7ed;border:2px solid #fdba74;border-radius:12px;padding:10px 14px;font-size:17px;color:#9a3412;margin:10px 0}
+.w-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.wall{columns:3 300px;column-gap:18px}
+.post{break-inside:avoid;margin-bottom:18px;border-radius:16px;padding:12px;box-shadow:0 6px 16px rgba(0,0,0,.1);cursor:pointer;position:relative;transform:rotate(var(--rot,0deg))}
+.post:hover{transform:rotate(0) scale(1.02)}
+.post canvas{width:100%;height:auto;display:block;border-radius:10px;background:#eee;min-height:80px}
+.post h3{font-family:'Jua',sans-serif;font-weight:400;font-size:24px;margin:10px 0 4px}
+.post p{margin:0;font-size:18px;white-space:pre-wrap;word-break:break-word}
+.post .meta{font-size:15px;color:#555;margin-top:8px;display:flex;justify-content:space-between;gap:8px}
+.post .del{position:absolute;top:8px;right:8px;background:rgba(225,29,72,.9);color:#fff;font-size:15px;padding:6px 10px}
+.empty{text-align:center;color:var(--sub);padding:40px}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal{background:#fff;border-radius:22px;padding:26px;max-width:520px;width:100%;box-shadow:var(--shadow);max-height:92vh;overflow:auto}
+.modal h2{font-family:'Jua',sans-serif;font-weight:400;font-size:30px;margin:0 0 10px}
+.modal .acts{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.modal.wide{max-width:1000px}
+.notice{background:#fef2f2;border:2px solid #fca5a5;color:#991b1b;border-radius:12px;padding:10px 14px;font-weight:700;margin:10px 0}
+
+/* entry */
+#entry{position:fixed;inset:0;background:linear-gradient(135deg,#4f6bff,#8b5cf6);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
+#entry .modal{max-width:480px}
+#entry .logo{font-size:64px;text-align:center}
+
+/* teacher */
+#teacher{position:fixed;inset:0;background:var(--bg);z-index:45;overflow:auto}
+.t-top{background:#1f2a44;color:#fff;padding:14px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:2}
+.t-top h1{font-family:'Jua',sans-serif;font-weight:400;font-size:28px;margin:0;flex:1}
+.switch{background:#334155;color:#fff;font-size:18px}
+.switch.on{background:var(--ok)}
+.t-nav{display:flex;gap:10px;padding:16px 20px 0;flex-wrap:wrap}
+.t-nav button{background:#e2e8f0;color:#334155}
+.t-nav button.active{background:var(--pri);color:#fff}
+.t-body{padding:16px 20px 40px}
+.cls-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.cls-chips button{background:#fff;border:2px solid var(--line);color:var(--ink);font-size:18px}
+.cls-chips button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+table{border-collapse:collapse;width:100%;background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:18px}
+th{background:#eef2ff}
+.bar{height:14px;border-radius:7px;background:#e2e8f0;overflow:hidden;min-width:120px}
+.bar i{display:block;height:100%;background:var(--ok)}
+.pending{background:#fffbeb}
+#toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:#1f2a44;color:#fff;padding:14px 24px;border-radius:14px;font-size:19px;z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
+#toast.show{opacity:1}
+footer{text-align:center;color:#8390ad;font-size:12px;padding:14px 20px 20px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<!-- 입장 화면 -->
+<div id="entry" class="hidden">
+  <div class="modal">
+    <div class="logo">🌀</div>
+    <h2 style="text-align:center">탄성력 탐구실 입장</h2>
+    <div class="field"><label>학번 (5자리)</label><input id="inId" inputmode="numeric" maxlength="5" placeholder="예: 10601"></div>
+    <div class="field"><label>닉네임 (10자 이내)</label><input id="inNick" maxlength="10" placeholder="별명을 써 주세요"></div>
+    <div class="notice">⚠️ 닉네임에 실명을 쓰지 마세요!</div>
+    <div class="field hint" style="font-size:16px;color:var(--sub)">한 번 입장하면 학번과 닉네임을 바꿀 수 없어요. 바꾸려면 선생님 승인이 필요해요.</div>
+    <div id="entryMsg" class="fb bad hidden"></div>
+    <div class="acts"><button class="btn-pri" id="entryBtn" style="width:100%;font-size:22px">입장하기</button></div>
+  </div>
+</div>
+
+<header>
+  <h1>🌀 탄성력 탐구실</h1>
+  <span class="chip" id="meChip">-</span>
+  <button class="hbtn" id="nickReqBtn">닉네임 변경 요청</button>
+  <button class="hbtn" id="teacherBtn">👩‍🏫 교사 모드</button>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-tab="practice">① 탄성력 방향 찾기 <span class="lock" id="lockP"></span></button>
+  <button class="tab" data-tab="wall">② 탄성력 사례 담벼락 <span class="lock" id="lockW"></span></button>
+</div>
+
+<main>
+  <!-- 탭 1: 방향 연습 -->
+  <section class="panel" id="tab-practice">
+    <div id="pLocked" class="locked hidden"><div class="big">🔒</div><h2>아직 열리지 않았어요</h2><p>선생님이 열어 주시면 시작할 수 있어요.</p></div>
+    <div id="pBody">
+      <div class="dots" id="dots"></div>
+      <div class="p-grid">
+        <div>
+          <div class="stage"><canvas id="pCanvas" width="900" height="520"></canvas></div>
+        </div>
+        <div>
+          <h2 class="q-title" id="qTitle"></h2>
+          <p class="q-sit" id="qSit"></p>
+          <div class="q-task" id="qTask"></div>
+          <div class="howto">👆 <b>반짝이는 점</b>에서 시작해서 손가락(마우스)으로 끌어 화살표를 그려요.</div>
+          <div class="fb info" id="fb">화살표를 그리면 바로 채점해 줄게요!</div>
+          <div class="p-btns">
+            <button class="btn-sub" id="bRetry">↺ 다시 그리기</button>
+            <button class="btn-sub hidden" id="bHint">💡 힌트</button>
+            <button class="btn-sub hidden" id="bReveal">정답 보기</button>
+            <button class="btn-sub hidden" id="bPlay">▶ 손을 놓으면?</button>
+          </div>
+          <div class="p-btns">
+            <button class="btn-sub" id="bPrev">◀ 이전</button>
+            <button class="btn-pri" id="bNext">다음 ▶</button>
+          </div>
+        </div>
+      </div>
+      <div class="rule hidden" id="ruleBox">🎉 모든 상황 완료!<br>탄성력의 방향은 물체에 작용한 힘(변형시킨 힘)과 <b>반대 방향</b>,<br>즉 물체가 <b>원래 모양으로 돌아가려는 방향</b>이에요.</div>
+    </div>
+  </section>
+
+  <!-- 탭 2: 사례 담벼락 -->
+  <section class="panel hidden" id="tab-wall">
+    <div id="wLocked" class="locked hidden"><div class="big">🔒</div><h2>아직 열리지 않았어요</h2><p>선생님이 열어 주시면 사례를 올릴 수 있어요.</p></div>
+    <div id="wBody">
+      <div class="w-form" id="wForm">
+        <h2>📸 내가 찾은 탄성력 사례 올리기 <span id="postCount" style="font-size:18px;color:var(--sub)"></span></h2>
+        <div class="w-row">
+          <div>
+            <div class="field"><label>① 사례 이름</label><input id="fTitle" maxlength="40" placeholder="예: 자전거 안장 아래 용수철"></div>
+            <div class="field"><label>② 탄성력이 어떻게 이용되나요?</label><textarea id="fBody" rows="5" maxlength="300" placeholder="무엇이 변형되고, 탄성력이 어느 방향으로 작용해서 어떤 도움을 주는지 써 보세요."></textarea><div class="hint"><span id="fCnt">0</span>/300자</div></div>
+            <div class="field"><label>③ 사진 출처 (인터넷 사진이면)</label><input id="fSource" maxlength="100" placeholder="예: 직접 찍음 / 사이트 이름"></div>
+          </div>
+          <div>
+            <div class="field"><label>④ 사진 올리고 탄성력 방향 그리기</label>
+              <div class="photo-drop" id="photoDrop">
+                <div style="font-size:48px">🖼️</div>
+                <label class="btn-pri" style="padding:12px 20px;border-radius:14px;cursor:pointer;color:#fff">📷 사진 찍기<input type="file" accept="image/*" capture="environment" id="fCam" hidden></label>
+                <label class="btn-sub" style="padding:12px 20px;border-radius:14px;cursor:pointer">🗂️ 사진 고르기<input type="file" accept="image/*" id="fFile" hidden></label>
+              </div>
+              <div id="editWrap" class="hidden">
+                <canvas id="editCanvas"></canvas>
+                <div class="hint" style="font-size:17px;color:var(--sub);margin:6px 0">탄성력이 작용하는 곳에서 시작해 끌면 <b style="color:#e11d48">빨간 화살표</b>가 그려져요. (1~3개)</div>
+                <div class="p-btns" style="margin-top:6px">
+                  <button class="btn-sub" id="eUndo">↶ 화살표 지우기</button>
+                  <button class="btn-sub" id="eNew">🖼️ 다른 사진</button>
+                </div>
+              </div>
+              <div class="warnbox">🙅 사람 얼굴, 이름, 학교 이름, 집 주소가 보이는 사진은 올리지 마세요.</div>
+            </div>
+          </div>
+        </div>
+        <div class="p-btns"><button class="btn-pri" id="fSubmit" style="font-size:22px;padding:14px 30px">담벼락에 붙이기 📌</button></div>
+      </div>
+
+      <div class="w-head">
+        <h2>🧱 탄성력 사례 담벼락</h2>
+        <button class="btn-sub" id="wRefresh">🔄 새로고침</button>
+      </div>
+      <div class="cls-chips" id="sChips"></div>
+      <div id="wall" class="wall"></div>
+      <div id="wallMsg" class="empty"></div>
+    </div>
+  </section>
+</main>
+
+<!-- 교사 화면 -->
+<div id="teacher" class="hidden">
+  <div class="t-top">
+    <h1>👩‍🏫 교사 모드</h1>
+    <button class="switch" id="swP">① 방향 찾기: -</button>
+    <button class="switch" id="swW">② 담벼락: -</button>
+    <button class="btn-sub" id="tClose">학생 화면으로</button>
+  </div>
+  <div class="t-nav">
+    <button data-tv="wall" class="active">🧱 담벼락 보기</button>
+    <button data-tv="prog">📊 연습 현황</button>
+    <button data-tv="nick">🏷️ 닉네임 관리 <span id="pendBadge"></span></button>
+  </div>
+  <div class="t-body">
+    <div id="tv-wall">
+      <div class="cls-chips" id="clsChips"></div>
+      <div class="wall" id="tWall"></div>
+      <div class="empty" id="tWallMsg"></div>
+    </div>
+    <div id="tv-prog" class="hidden"></div>
+    <div id="tv-nick" class="hidden"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<footer>
+  이 가상실험(프로그램 코드, 디자인, 캐릭터·그림, 애니메이션, 문항과 설명 글)의 저작권은 제작자 혜민쌤에게 있으며, 허락 없이 복제·수정·배포·게시하거나 상업적으로 이용하는 것을 금지합니다.<br>
+  © <span id="yr">2026</span> 혜민쌤의 가상실험실
+</footer>
+
+<script>
+(function(){
+'use strict';
+/* ================= 기본 설정 ================= */
+const CFG = window.APP_CONFIG || {};
+document.getElementById('yr').textContent = CFG.YEAR || new Date().getFullYear();
+let sb = null;
+try { sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY); } catch(e) { console.error(e); }
+const $ = id => document.getElementById(id);
+const LS = 'elastic_user_v1';
+function lsGet(){ try { return JSON.parse(localStorage.getItem(LS) || 'null'); } catch(e){ return null; } }
+function lsSet(v){ try { localStorage.setItem(LS, JSON.stringify(v)); } catch(e){} }
+let me = null;
+let settings = { practice_open: true, wall_open: false };
+let curTab = 'practice';
+
+function toast(msg, ms){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'), ms||2600); }
+async function rpc(name, args){
+  if(!sb) throw new Error('config.js 의 Supabase 설정을 확인하세요.');
+  const { data, error } = await sb.rpc(name, args);
+  if(error) throw error;
+  return data;
+}
+function classLabel(cn){ return cn ? `${cn[0]}학년 ${parseInt(cn.slice(1),10)}반` : ''; }
+function el(tag, attrs, ...kids){
+  const e=document.createElement(tag);
+  if(attrs) for(const k in attrs){ if(k==='class') e.className=attrs[k]; else if(k==='text') e.textContent=attrs[k]; else if(k.startsWith('on')) e.addEventListener(k.slice(2), attrs[k]); else e.setAttribute(k, attrs[k]); }
+  kids.forEach(k=>{ if(k!=null) e.append(k); });
+  return e;
+}
+
+/* 간단한 입력 창 */
+function dialog({title, message, input, value, okText, cancel=true, danger=false}){
+  return new Promise(res=>{
+    const inp = input ? el('input',{maxlength:'30', type: input==='password'?'password':'text'}) : null;
+    if(inp && value) inp.value=value;
+    const ov = el('div',{class:'overlay'});
+    const close = v => { ov.remove(); res(v); };
+    const ok = el('button',{class: danger?'btn-bad':'btn-pri', text: okText||'확인', onclick:()=>close(inp?inp.value:true)});
+    const m = el('div',{class:'modal'}, el('h2',{text:title}), message?el('p',{text:message}):null, inp,
+      el('div',{class:'acts'}, cancel?el('button',{class:'btn-sub',text:'취소',onclick:()=>close(null)}):null, ok));
+    ov.append(m); document.body.append(ov);
+    if(inp){ inp.focus(); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') ok.click(); }); }
+  });
+}
+
+/* ================= 입장 ================= */
+function showEntry(msg){
+  $('entry').classList.remove('hidden');
+  if(msg){ $('entryMsg').textContent=msg; $('entryMsg').classList.remove('hidden'); }
+}
+async function doEntry(){
+  const id = $('inId').value.trim(), nick = $('inNick').value.trim();
+  const m = $('entryMsg'); m.classList.add('hidden');
+  if(!/^[1-3](0[1-9]|1[0-9])[0-9]{2}$/.test(id)){ m.textContent='학번 5자리를 정확히 써 주세요. (예: 10601)'; m.classList.remove('hidden'); return; }
+  const CC=CFG.CLASS_COUNT||7; if(parseInt(id.slice(1,3),10)>CC){ m.textContent=`우리 학교는 ${CC}반까지 있어요. 학번을 다시 확인해 주세요.`; m.classList.remove('hidden'); return; }
+  if(!nick || nick.length>10){ m.textContent='닉네임을 1~10자로 써 주세요.'; m.classList.remove('hidden'); return; }
+  $('entryBtn').disabled=true;
+  try{
+    const r = await rpc('elastic_register',{p_id:id, p_nick:nick});
+    if(r.status==='ok'){ me={id, nick:r.nickname}; lsSet(me); $('entry').classList.add('hidden'); startApp(r.pending); }
+    else if(r.status==='taken'){ m.textContent='이 학번은 이미 다른 닉네임으로 등록되어 있어요. 내 학번이 맞다면 선생님께 말씀드리세요.'; m.classList.remove('hidden'); }
+    else { m.textContent='학번 또는 닉네임을 다시 확인해 주세요.'; m.classList.remove('hidden'); }
+  }catch(e){ m.textContent='연결 오류: '+(e.message||e); m.classList.remove('hidden'); }
+  $('entryBtn').disabled=false;
+}
+$('entryBtn').onclick=doEntry;
+$('inNick').addEventListener('keydown',e=>{ if(e.key==='Enter') doEntry(); });
+
+async function boot(){
+  const saved = lsGet();
+  if(!saved){ showEntry(); return; }
+  try{
+    const r = await rpc('elastic_register',{p_id:saved.id, p_nick:saved.nick});
+    if(r.status==='ok'){ me={id:saved.id, nick:r.nickname}; lsSet(me); startApp(r.pending); }
+    else { $('inId').value=saved.id; showEntry('저장된 닉네임이 맞지 않아요. 선생님께 확인해 주세요.'); }
+  }catch(e){ me=saved; startApp(null); toast('서버 연결을 확인해 주세요.'); }
+}
+
+let started=false;
+function startApp(pending){
+  $('meChip').textContent = `${classLabel(me.id.slice(0,3))} ${parseInt(me.id.slice(3),10)}번 · ${me.nick}`;
+  if(pending) toast(`닉네임 변경 요청(“${pending}”)을 선생님이 확인 중이에요.`, 3500);
+  if(started) return; started=true;
+  pollSettings(); setInterval(pollSettings, 4000);
+  loadProgress();
+  renderScene();
+  requestAnimationFrame(loop);
+}
+
+$('nickReqBtn').onclick = async ()=>{
+  if(!me) return;
+  const v = await dialog({title:'닉네임 변경 요청', message:'새 닉네임을 써 주세요. 선생님이 승인하면 바뀌어요. (실명 금지!)', input:'text', okText:'요청 보내기'});
+  if(!v || !v.trim()) return;
+  if(v.trim().length>10){ toast('10자 이내로 써 주세요.'); return; }
+  try{ const ok = await rpc('elastic_request_nick',{p_id:me.id,p_nick:me.nick,p_new:v.trim()}); toast(ok?'요청을 보냈어요. 선생님 승인을 기다려 주세요.':'요청에 실패했어요.'); }
+  catch(e){ toast('연결 오류'); }
+};
+
+/* ================= 탭 / 설정 ================= */
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{ curTab=b.dataset.tab; applyTabs(); if(curTab==='wall') loadWall(); });
+function applyTabs(){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===curTab));
+  $('tab-practice').classList.toggle('hidden', curTab!=='practice');
+  $('tab-wall').classList.toggle('hidden', curTab!=='wall');
+  $('lockP').textContent = settings.practice_open?'':'🔒';
+  $('lockW').textContent = settings.wall_open?'':'🔒';
+  $('pLocked').classList.toggle('hidden', settings.practice_open);
+  $('pBody').classList.toggle('hidden', !settings.practice_open);
+  $('wLocked').classList.toggle('hidden', settings.wall_open);
+  $('wBody').classList.toggle('hidden', !settings.wall_open);
+}
+async function pollSettings(){
+  if(!sb) return;
+  try{
+    const { data } = await sb.from('elastic_settings').select('practice_open,wall_open').eq('id',1).single();
+    if(data){
+      const wasWall = settings.wall_open;
+      settings=data; applyTabs(); updateSwitches();
+      if(!wasWall && data.wall_open && curTab==='wall') loadWall();
+    }
+  }catch(e){}
+}
+
+/* ================= 탭 1: 탄성력 방향 찾기 ================= */
+const cv=$('pCanvas'), ctx=cv.getContext('2d');
+const W=900, H=520;
+(function setupHiDPI(){ const dpr=Math.min(window.devicePixelRatio||1,2); cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); })();
+
+const C = { spring:'#ff7a1a', skin:'#ffd5b0', skinLine:'#d79a6a', wood:'#9a6233', steel:'#64748b', ink:'#1f2a44' };
+function zigzag(x1,y1,x2,y2,coils,amp,color,lw){
+  const dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy)||1, ux=dx/L, uy=dy/L, px=-uy, py=ux;
+  const lead=Math.min(16,L*0.08), n=coils*2, seg=(L-2*lead)/n;
+  ctx.save(); ctx.strokeStyle=color||C.spring; ctx.lineWidth=lw||5; ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x1+ux*lead,y1+uy*lead);
+  for(let i=1;i<n;i++){ const s=lead+seg*i, sd=(i%2?1:-1)*amp; ctx.lineTo(x1+ux*s+px*sd, y1+uy*s+py*sd); }
+  ctx.lineTo(x2-ux*lead,y2-uy*lead); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+}
+function arrow(x1,y1,x2,y2,color,lw,dash){
+  const a=Math.atan2(y2-y1,x2-x1), hl=Math.max(18,lw*3.2);
+  ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=lw; ctx.lineCap='round';
+  if(dash) ctx.setLineDash([12,9]);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2-Math.cos(a)*hl*0.7, y2-Math.sin(a)*hl*0.7); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-hl*Math.cos(a-0.45), y2-hl*Math.sin(a-0.45)); ctx.lineTo(x2-hl*Math.cos(a+0.45), y2-hl*Math.sin(a+0.45)); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function label(t,x,y,opt){
+  opt=opt||{}; ctx.save(); ctx.font=`${opt.bold===false?'':'bold '}${opt.size||24}px 'Noto Sans KR',sans-serif`;
+  ctx.textAlign=opt.align||'center'; ctx.textBaseline='middle';
+  if(opt.bg){ const w=ctx.measureText(t).width+18, h=(opt.size||24)+12; let bx=x-w/2; if(ctx.textAlign==='left') bx=x-9; if(ctx.textAlign==='right') bx=x-w+9; ctx.fillStyle=opt.bg; roundRect(bx,y-h/2,w,h,10); ctx.fill(); }
+  ctx.fillStyle=opt.color||C.ink; ctx.fillText(t,x,y); ctx.restore();
+}
+function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function hatchWall(x,y,w,h){
+  ctx.save(); ctx.fillStyle='#cbd5e1'; ctx.fillRect(x,y,w,h); ctx.strokeStyle='#94a3b8'; ctx.lineWidth=2;
+  ctx.beginPath(); for(let i=-h;i<w+h;i+=16){ ctx.moveTo(x+i,y); ctx.lineTo(x+i-h*0.5,y+h); }
+  ctx.save(); ctx.rect(x,y,w,h); ctx.clip(); ctx.stroke(); ctx.restore(); ctx.restore();
+}
+function hand(x,y,txt){
+  ctx.save(); ctx.fillStyle=C.skin; ctx.strokeStyle=C.skinLine; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.ellipse(x,y,32,26,0,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
+  label(txt||'손',x,y,{size:20,color:'#7c4a21'});
+}
+function restLine(x1,y1,x2,y2,txt,tx,ty){
+  ctx.save(); ctx.strokeStyle='#94a3b8'; ctx.lineWidth=2; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+  if(txt) label(txt,tx,ty,{size:18,color:'#64748b',bold:false});
+}
+function person(fx,fy,scale){
+  const s=scale||1; ctx.save(); ctx.strokeStyle='#334155'; ctx.lineWidth=7*s; ctx.lineCap='round'; ctx.fillStyle='#60a5fa';
+  ctx.beginPath(); ctx.moveTo(fx-14*s,fy); ctx.lineTo(fx,fy-55*s); ctx.lineTo(fx+14*s,fy); ctx.stroke();
+  roundRect(fx-20*s,fy-120*s,40*s,70*s,14*s); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(fx-20*s,fy-105*s); ctx.lineTo(fx-38*s,fy-70*s); ctx.moveTo(fx+20*s,fy-105*s); ctx.lineTo(fx+38*s,fy-70*s); ctx.stroke();
+  ctx.fillStyle=C.skin; ctx.strokeStyle=C.skinLine; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(fx,fy-142*s,22*s,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function qPoint(p0,p1,p2,t){ const a=(1-t)*(1-t), b=2*(1-t)*t, c=t*t; return {x:a*p0.x+b*p1.x+c*p2.x, y:a*p0.y+b*p1.y+c*p2.y}; }
+
+/* 상황 10가지 — draw(d, agent): d=변형 정도(1=변형됨), agent=변형시키는 물체 표시 */
+const SCN = [
+ { key:'pull', title:'늘어난 용수철', sit:'손으로 용수철을 오른쪽으로 당겨서 늘였어요.', target:'용수철이 손에 작용하는 탄성력',
+   ang:180, hint:'손이 용수철을 당긴 힘',
+   pt(d){ return {x:380+220*d+6, y:270}; },
+   explain:'용수철은 오른쪽으로 늘어났으니, 원래 길이로 돌아가려고 손을 <b>왼쪽</b>으로 당겨요.',
+   draw(d,ag){ const xe=380+220*d; hatchWall(50,140,50,260); restLine(380,170,380,370,'원래 길이',380,150);
+     zigzag(100,270,xe,270,10,26); ctx.fillStyle=C.steel; ctx.beginPath(); ctx.arc(xe,270,7,0,7); ctx.fill();
+     if(ag) hand(xe+38,270); } },
+ { key:'push', title:'눌린 용수철', sit:'손으로 용수철을 왼쪽으로 밀어서 짧게 눌렀어요.', target:'용수철이 손에 작용하는 탄성력',
+   ang:0, hint:'손이 용수철을 민 힘',
+   pt(d){ return {x:540-240*d+6, y:270}; },
+   explain:'용수철은 왼쪽으로 눌렸으니, 원래 길이로 돌아가려고 손을 <b>오른쪽</b>으로 밀어요.',
+   draw(d,ag){ const xe=540-240*d; hatchWall(50,140,50,260); restLine(540,170,540,370,'원래 길이',540,150);
+     zigzag(100,270,xe,270,10,30); ctx.fillStyle=C.steel; ctx.fillRect(xe-4,235,8,70);
+     if(ag) hand(xe+38,270); } },
+ { key:'hang', title:'추를 매단 용수철', sit:'천장에 매단 용수철에 추를 걸었더니 아래로 늘어났어요.', target:'용수철이 추에 작용하는 탄성력',
+   ang:270, hint:'추가 용수철을 당긴 힘',
+   pt(d){ return {x:450, y:210+130*d+8}; },
+   explain:'용수철은 아래로 늘어났으니, 원래 길이로 돌아가려고 추를 <b>위쪽</b>으로 당겨요.',
+   draw(d,ag){ const ye=210+130*d; hatchWall(250,30,400,36); restLine(330,210,570,210,'원래 길이',640,210);
+     zigzag(450,66,450,ye,9,24); ctx.fillStyle=C.steel; ctx.beginPath(); ctx.arc(450,ye,7,0,7); ctx.fill();
+     if(ag){ ctx.fillStyle='#475569'; roundRect(400,ye+8,100,86,10); ctx.fill(); label('추',450,ye+51,{color:'#fff',size:26}); } } },
+ { key:'sling', title:'새총', sit:'새총의 고무줄을 돌멩이와 함께 왼쪽으로 당겼어요.', target:'고무줄이 돌멩이에 작용하는 탄성력',
+   ang:0, hint:'손이 고무줄을 당긴 힘',
+   pt(d){ return {x:640-270*d+2, y:270}; },
+   explain:'고무줄은 왼쪽으로 늘어났으니, 원래대로 돌아가려고 돌멩이를 <b>오른쪽</b>으로 밀어 줘요. 그래서 돌멩이가 날아가요.',
+   draw(d,ag){ const px=640-270*d;
+     ctx.save(); ctx.strokeStyle=C.wood; ctx.lineWidth=18; ctx.lineCap='round';
+     ctx.beginPath(); ctx.moveTo(640,140); ctx.quadraticCurveTo(700,140,720,270); ctx.quadraticCurveTo(700,400,640,400); ctx.moveTo(720,270); ctx.lineTo(860,270); ctx.stroke(); ctx.restore();
+     ctx.save(); ctx.strokeStyle='#e11d48'; ctx.lineWidth=7; ctx.beginPath(); ctx.moveTo(640,140); ctx.lineTo(px,270); ctx.lineTo(640,400); ctx.stroke(); ctx.restore();
+     ctx.fillStyle='#7c2d12'; roundRect(px-14,248,20,44,6); ctx.fill();
+     if(ag){ ctx.fillStyle='#9ca3af'; ctx.strokeStyle='#4b5563'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(px+16,270,20,0,7); ctx.fill(); ctx.stroke(); hand(px-46,270); label('돌멩이',px+16,316,{size:18,color:'#475569'}); } } },
+ { key:'bow', title:'활', sit:'활시위를 화살과 함께 왼쪽으로 당겼어요.', target:'활시위가 화살에 작용하는 탄성력',
+   ang:0, hint:'손이 활시위를 당긴 힘',
+   pt(d){ return {x:600-210*d, y:270}; },
+   explain:'활시위가 왼쪽으로 늘어났으니, 원래대로 돌아가려고 화살을 <b>오른쪽(앞쪽)</b>으로 밀어 줘요.',
+   draw(d,ag){ const nx=600-210*d;
+     ctx.save(); ctx.strokeStyle=C.wood; ctx.lineWidth=14; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(600,80); ctx.quadraticCurveTo(720+60*d,270,600,460); ctx.stroke();
+     ctx.strokeStyle='#334155'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(600,80); ctx.lineTo(nx,270); ctx.lineTo(600,460); ctx.stroke(); ctx.restore();
+     if(ag){ ctx.save(); ctx.strokeStyle='#a16207'; ctx.lineWidth=7; ctx.beginPath(); ctx.moveTo(nx,270); ctx.lineTo(nx+330,270); ctx.stroke();
+       ctx.fillStyle='#475569'; ctx.beginPath(); ctx.moveTo(nx+352,270); ctx.lineTo(nx+326,256); ctx.lineTo(nx+326,284); ctx.fill();
+       ctx.fillStyle='#f87171'; ctx.beginPath(); ctx.moveTo(nx+4,270); ctx.lineTo(nx+30,252); ctx.lineTo(nx+46,252); ctx.lineTo(nx+22,270); ctx.lineTo(nx+46,288); ctx.lineTo(nx+30,288); ctx.fill(); ctx.restore();
+       hand(nx-40,270); label('화살(물체)',nx+200,240,{size:18,color:'#92400e'}); } } },
+ { key:'tramp', title:'트램펄린', sit:'사람이 트램펄린 위에 올라서서 그물이 아래로 휘었어요.', target:'트램펄린이 사람에게 작용하는 탄성력',
+   ang:270, hint:'사람이 트램펄린을 누른 힘',
+   pt(d){ return {x:450, y:300+100*d}; },
+   explain:'그물이 아래로 휘었으니, 원래 모양으로 돌아가려고 사람을 <b>위쪽</b>으로 밀어 올려요.',
+   draw(d,ag){ ctx.save(); ctx.strokeStyle='#334155'; ctx.lineWidth=10; ctx.lineCap='round';
+     ctx.beginPath(); ctx.moveTo(170,300); ctx.lineTo(150,470); ctx.moveTo(730,300); ctx.lineTo(750,470); ctx.stroke();
+     ctx.strokeStyle='#2563eb'; ctx.lineWidth=8; ctx.beginPath(); ctx.moveTo(170,300); ctx.quadraticCurveTo(450,300+200*d,730,300); ctx.stroke(); ctx.restore();
+     restLine(170,300,730,300,'원래 모양',800,300);
+     if(ag) person(450,300+100*d-4,1); } },
+ { key:'dive', title:'다이빙대', sit:'사람이 다이빙대 끝에 서서 판이 아래로 휘었어요.', target:'다이빙대가 사람에게 작용하는 탄성력',
+   ang:270, tol:38, hint:'사람이 다이빙대를 누른 힘',
+   pt(d){ const p=qPoint({x:200,y:300},{x:460,y:300},{x:740,y:300+120*d},0.93); return {x:p.x,y:p.y-8}; },
+   explain:'판이 아래로 휘었으니, 원래대로 펴지려고 사람을 <b>위쪽</b>으로 밀어 올려요.',
+   draw(d,ag){ ctx.fillStyle='#94a3b8'; ctx.fillRect(60,300,150,180); ctx.fillStyle='#bae6fd'; ctx.fillRect(210,440,690,80);
+     ctx.save(); ctx.strokeStyle='#0f766e'; ctx.lineWidth=16; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(200,300); ctx.quadraticCurveTo(460,300,740,300+120*d); ctx.stroke(); ctx.restore();
+     restLine(200,292,760,292,'원래 모양',820,270);
+     if(ag){ const p=qPoint({x:200,y:300},{x:460,y:300},{x:740,y:300+120*d},0.93); person(p.x,p.y-8,0.9); } } },
+ { key:'ball', title:'고무공', sit:'손가락으로 고무공을 위에서 꾹 눌러 찌그러뜨렸어요.', target:'고무공이 손가락에 작용하는 탄성력',
+   ang:270, hint:'손가락이 공을 누른 힘',
+   pt(d){ const ry=95-35*d; return {x:450, y:430-2*ry}; },
+   explain:'공이 위에서 눌려 찌그러졌으니, 원래 모양으로 돌아가려고 손가락을 <b>위쪽</b>으로 밀어요.',
+   draw(d,ag){ const ry=95-35*d, rx=95+25*d, top=430-2*ry; hatchWall(150,430,600,30);
+     ctx.save(); const g=ctx.createRadialGradient(420,430-ry-25,10,450,430-ry,rx); g.addColorStop(0,'#fca5a5'); g.addColorStop(1,'#dc2626');
+     ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(450,430-ry,rx,ry,0,0,7); ctx.fill(); ctx.restore();
+     ctx.save(); ctx.strokeStyle='#94a3b8'; ctx.lineWidth=2; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.arc(450,335,95,0,7); ctx.stroke(); ctx.restore();
+     label('원래 모양',620,250,{size:18,color:'#64748b',bold:false});
+     if(ag){ ctx.fillStyle=C.skin; ctx.strokeStyle=C.skinLine; ctx.lineWidth=3; roundRect(422,40,56,top-40,24); ctx.fill(); ctx.stroke(); label('손가락',520,90,{size:20,color:'#7c4a21'}); } } },
+ { key:'racket', title:'테니스 라켓', sit:'날아온 공이 라켓 줄을 왼쪽으로 밀어서 줄이 휘었어요. (옆에서 본 모습)', target:'라켓 줄이 공에 작용하는 탄성력',
+   ang:0, hint:'공이 라켓 줄을 민 힘',
+   pt(d){ return {x:480-70*d+4, y:270}; },
+   explain:'라켓 줄이 왼쪽으로 휘었으니, 원래대로 펴지려고 공을 <b>오른쪽</b>으로 밀어서 튕겨 내요.',
+   draw(d,ag){ ctx.save(); ctx.strokeStyle='#1e293b'; ctx.lineWidth=14; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(480,100); ctx.lineTo(480,140); ctx.moveTo(480,400); ctx.lineTo(480,440); ctx.stroke(); ctx.strokeStyle='#94a3b8'; ctx.lineWidth=2; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(480,140); ctx.lineTo(480,400); ctx.stroke(); ctx.setLineDash([]);
+     ctx.strokeStyle='#a16207'; ctx.lineWidth=22; ctx.beginPath(); ctx.moveTo(480,440); ctx.lineTo(480,515); ctx.stroke();
+     ctx.strokeStyle='#22c55e'; ctx.lineWidth=5; ctx.beginPath(); ctx.moveTo(480,130); ctx.quadraticCurveTo(480-140*d,270,480,410); ctx.stroke(); ctx.restore();
+     if(ag){ const bx=480-70*d+36; ctx.fillStyle='#d9f99d'; ctx.strokeStyle='#65a30d'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(bx,270,32,0,7); ctx.fill(); ctx.stroke();
+       ctx.save(); ctx.strokeStyle='#94a3b8'; ctx.lineWidth=4; for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(bx+50+i*4,250+i*20); ctx.lineTo(bx+110+i*4,250+i*20); ctx.stroke(); } ctx.restore();
+       label('공 (← 날아옴)',bx+110,330,{size:18,color:'#4d7c0f'}); }
+     label('라켓 틀',400,110,{size:18,color:'#475569'}); label('원래 줄 위치',560,180,{size:18,color:'#64748b',bold:false}); } },
+ { key:'diag', title:'비스듬히 당긴 용수철', sit:'오른쪽 위에 고정된 용수철을 왼쪽 아래로 비스듬히 당겼어요.', target:'용수철이 손에 작용하는 탄성력',
+   ang:315, hint:'손이 용수철을 당긴 힘',
+   pt(d){ const L=210+190*d, k=Math.SQRT1_2; return {x:740-k*L-k*6, y:110+k*L+k*6}; },
+   explain:'용수철이 왼쪽 아래로 늘어났으니, 원래 길이로 돌아가려고 손을 <b>오른쪽 위</b>(용수철이 고정된 쪽)로 당겨요.',
+   draw(d,ag){ const L=210+190*d, k=Math.SQRT1_2, ex=740-k*L, ey=110+k*L;
+     hatchWall(760,40,60,200); ctx.fillStyle=C.steel; ctx.fillRect(730,96,32,28);
+     const rx=740-k*210, ry=110+k*210; ctx.save(); ctx.strokeStyle='#94a3b8'; ctx.lineWidth=2; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(rx-30,ry-30); ctx.lineTo(rx+30,ry+30); ctx.stroke(); ctx.restore();
+     label('원래 길이',rx+80,ry+24,{size:18,color:'#64748b',bold:false});
+     zigzag(740,110,ex,ey,10,24); ctx.fillStyle=C.steel; ctx.beginPath(); ctx.arc(ex,ey,7,0,7); ctx.fill();
+     if(ag) hand(ex-k*36,ey+k*36); } },
+ { key:'key', title:'컴퓨터 자판', sit:'손가락으로 자판을 꾹 눌러서 자판 아래 용수철(고무)이 눌렸어요.', target:'자판(용수철)이 손가락에 작용하는 탄성력',
+   ang:270, hint:'손가락이 자판을 누른 힘',
+   pt(d){ return {x:450, y:300+60*d-50}; },
+   explain:'자판 아래 용수철이 아래로 눌렸으니, 원래 모양으로 돌아가려고 자판과 손가락을 <b>위쪽</b>으로 밀어 올려요. 그래서 손을 떼면 자판이 다시 올라와요.',
+   draw(d,ag){ const yb=300+60*d; ctx.fillStyle='#475569'; roundRect(300,470,300,26,8); ctx.fill();
+     zigzag(450,470,450,yb,5,34,'#ff7a1a',6);
+     ctx.fillStyle='#e2e8f0'; ctx.strokeStyle='#64748b'; ctx.lineWidth=3; roundRect(370,yb-50,160,50,12); ctx.fill(); ctx.stroke();
+     label('A',450,yb-25,{size:26,color:'#334155'});
+     restLine(330,250,570,250,'원래 높이',640,250);
+     if(ag){ ctx.fillStyle=C.skin; ctx.strokeStyle=C.skinLine; ctx.lineWidth=3; roundRect(422,30,56,yb-50-30,24); ctx.fill(); ctx.stroke(); label('손가락',520,80,{size:20,color:'#7c4a21'}); } } }
+];
+
+let idx=0; const state = SCN.map(()=>({tries:0, wrong:0, solved:false, revealed:false, last:null, showHint:false}));
+let drag=null;   // {x,y} 끝점
+let anim=null;   // 손을 놓으면 애니메이션 시작 시각
+
+async function loadProgress(){
+  try{ const rows = await rpc('elastic_my_progress',{p_id:me.id,p_nick:me.nick});
+    (rows||[]).forEach(r=>{ const i=SCN.findIndex(s=>s.key===r.scenario); if(i>=0 && r.correct){ state[i].solved=true; } });
+    renderScene();
+  }catch(e){}
+}
+function renderDots(){
+  const box=$('dots'); box.innerHTML='';
+  SCN.forEach((s,i)=>{ const b=el('button',{class:'dot'+(i===idx?' cur':'')+(state[i].solved?' done':(state[i].revealed?' rev':'')), text:String(i+1), title:s.title, onclick:()=>{ idx=i; drag=null; anim=null; renderScene(); }}); box.append(b); });
+  const allDone = state.every(s=>s.solved||s.revealed);
+  $('ruleBox').classList.toggle('hidden', !allDone);
+}
+function renderScene(){
+  const s=SCN[idx], st=state[idx];
+  $('qTitle').textContent = `${idx+1}. ${s.title}`;
+  $('qSit').textContent = s.sit;
+  $('qTask').innerHTML = `<span class="target">${s.target}</span>의 방향을 화살표로 그려 보세요.`;
+  const fb=$('fb');
+  if(st.solved){ fb.className='fb ok'; fb.innerHTML='⭕ 정답! '+s.explain; }
+  else if(st.revealed){ fb.className='fb info'; fb.innerHTML='📘 정답: '+s.explain+'<br>다음 문제도 도전해 보세요!'; }
+  else { fb.className='fb info'; fb.textContent='화살표를 그리면 바로 채점해 줄게요!'; }
+  $('bHint').classList.toggle('hidden', st.solved || st.revealed || st.wrong<1);
+  $('bReveal').classList.toggle('hidden', st.solved || st.revealed || st.wrong<2);
+  $('bPlay').classList.toggle('hidden', !(st.solved||st.revealed));
+  $('bPrev').disabled = idx===0;
+  $('bNext').textContent = idx===SCN.length-1 ? '처음으로 ▶' : '다음 ▶';
+  renderDots();
+}
+function angDiff(a,b){ let d=Math.abs(((a-b)%360+360)%360); return d>180?360-d:d; }
+function toCanvas(e){ const r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left)*W/r.width, y:(e.clientY-r.top)*H/r.height}; }
+
+cv.addEventListener('pointerdown',e=>{
+  const st=state[idx]; if(st.solved||st.revealed||anim) return;
+  e.preventDefault(); cv.setPointerCapture(e.pointerId);
+  st.last=null; drag=toCanvas(e);
+});
+cv.addEventListener('pointermove',e=>{ if(drag){ drag=toCanvas(e); } });
+cv.addEventListener('pointerup',e=>{ if(!drag) return; const tip=drag; drag=null; check(tip); });
+cv.addEventListener('pointercancel',()=>{ drag=null; });
+
+function check(tip){
+  const s=SCN[idx], st=state[idx], p=s.pt(1);
+  const dx=tip.x-p.x, dy=tip.y-p.y, len=Math.hypot(dx,dy);
+  const fb=$('fb');
+  if(len<45){ fb.className='fb info'; fb.textContent='화살표가 너무 짧아요. 반짝이는 점에서 더 길게 끌어 보세요!'; return; }
+  const a=(Math.atan2(dy,dx)*180/Math.PI+360)%360, tol=s.tol||30;
+  const ok = angDiff(a,s.ang)<=tol;
+  st.tries++; st.last={x:tip.x,y:tip.y,ok};
+  if(ok){ st.solved=true; toast('🎉 정답!'); } else { st.wrong++; }
+  saveResult(s.key, ok);
+  renderScene();
+  if(!ok) showBadMsg(a);
+}
+function showBadMsg(a){ const s=SCN[idx], tol=s.tol||30; const fb=$('fb'); fb.className='fb bad';
+  fb.innerHTML = angDiff(a,s.ang+180)<=tol ? `❌ 그 방향은 <b>${s.hint}</b>의 방향이에요.<br>탄성력은 변형시킨 힘과 <b>반대</b> 방향으로 작용해요!` : '❌ 다시 생각해 봐요. 물체가 <b>어느 쪽으로 변형</b>되었는지, 원래 모양으로 돌아가려면 <b>어느 쪽</b>으로 힘을 줘야 하는지 생각해 보세요.'; }
+async function saveResult(key, ok){ try{ await rpc('elastic_save_practice',{p_id:me.id,p_nick:me.nick,p_scn:key,p_correct:ok}); }catch(e){} }
+
+$('bRetry').onclick=()=>{ const st=state[idx]; if(st.solved||st.revealed) { toast('이미 끝난 문제예요. 다음 문제로 가 볼까요?'); return; } st.last=null; drag=null; renderScene(); };
+$('bHint').onclick=()=>{ state[idx].showHint=true; toast('주황색 점선 화살표는 물체를 변형시킨 힘이에요.'); };
+$('bReveal').onclick=()=>{ const st=state[idx]; st.revealed=true; st.last=null; saveResult(SCN[idx].key,false); renderScene(); };
+$('bPlay').onclick=()=>{ anim=performance.now(); };
+$('bPrev').onclick=()=>{ if(idx>0){ idx--; drag=null; anim=null; renderScene(); } };
+$('bNext').onclick=()=>{ idx=(idx+1)%SCN.length; drag=null; anim=null; renderScene(); };
+
+function loop(t){
+  if(curTab==='practice' && settings.practice_open) drawFrame(t);
+  requestAnimationFrame(loop);
+}
+function drawFrame(t){
+  const s=SCN[idx], st=state[idx];
+  ctx.clearRect(0,0,W,H); ctx.fillStyle='#fbfdff'; ctx.fillRect(0,0,W,H);
+  let d=1, ag=true;
+  if(anim){ const tt=(t-anim)/1000; if(tt>3){ anim=null; } else { ag=false; d=Math.exp(-1.6*tt)*Math.cos(tt*7); if(d<-0.35) d=-0.35; } }
+  s.draw(d,ag);
+  if(anim){ label('변형시킨 물체가 없어지면 → 원래 모양으로 돌아가려 해요!',450,30,{size:22,bg:'#fef3c7',color:'#92400e'}); return; }
+  const p=s.pt(1);
+  // 힌트: 변형시킨 힘
+  if(st.showHint && !st.solved){ const r=(s.ang+180)*Math.PI/180, ox=-Math.sin(r)*48, oy=Math.cos(r)*48, hx=p.x+ox, hy=p.y+oy; arrow(hx,hy,hx+Math.cos(r)*120,hy+Math.sin(r)*120,'#f59e0b',6,true); label(s.hint,Math.min(Math.max(hx+Math.cos(r)*70,110),W-110),hy+Math.sin(r)*70+(oy<0?-30:30)+(Math.abs(oy)<5?30:0),{size:18,bg:'#fff7ed',color:'#b45309'}); }
+  // 정답 화살표
+  if(st.solved||st.revealed){ const r=s.ang*Math.PI/180, L=140; arrow(p.x,p.y,p.x+Math.cos(r)*L,p.y+Math.sin(r)*L,'#16a34a',9);
+    const lx=p.x+Math.cos(r)*(L+44), ly=p.y+Math.sin(r)*(L+30); label('탄성력',Math.min(Math.max(lx,60),W-60),Math.min(Math.max(ly,24),H-24),{size:22,bg:'#dcfce7',color:'#166534'}); }
+  // 학생 화살표
+  if(drag) arrow(p.x,p.y,drag.x,drag.y,'#4f6bff',8);
+  else if(st.last && !st.last.ok && !(st.solved||st.revealed)) arrow(p.x,p.y,st.last.x,st.last.y,'#e11d48',8);
+  // 작용점 표시
+  if(!(st.solved||st.revealed)){ const pulse=(Math.sin(t/220)+1)/2; ctx.save(); ctx.fillStyle='rgba(79,107,255,'+(0.18+0.25*pulse)+')'; ctx.beginPath(); ctx.arc(p.x,p.y,16+10*pulse,0,7); ctx.fill(); ctx.fillStyle='#4f6bff'; ctx.beginPath(); ctx.arc(p.x,p.y,8,0,7); ctx.fill(); ctx.restore(); }
+}
+
+/* ================= 탭 2: 사례 담벼락 ================= */
+const ec=$('editCanvas'), ectx=ec.getContext('2d');
+let photo=null, photoURL=null, arrowsN=[], eDrag=null;
+const COLORS=['#fff59d','#ffccbc','#c8e6c9','#b3e5fc','#e1bee7','#ffe0b2'];
+const imgCache=new Map();
+
+$('fBody').addEventListener('input',()=>{ $('fCnt').textContent=$('fBody').value.length; });
+function compressImage(file){
+  return new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onload=()=>{ const im=new Image(); im.onload=()=>{
+        let max=1000, q=0.78, out='';
+        for(let k=0;k<5;k++){ const sc=Math.min(1,max/Math.max(im.width,im.height)); const c=document.createElement('canvas'); c.width=Math.round(im.width*sc); c.height=Math.round(im.height*sc);
+          c.getContext('2d').drawImage(im,0,0,c.width,c.height); out=c.toDataURL('image/jpeg',q); if(out.length<550000) break; max*=0.8; q-=0.08; }
+        if(out.length>=550000) rej(new Error('사진이 너무 커요')); else res(out);
+      }; im.onerror=()=>rej(new Error('사진을 읽을 수 없어요')); im.src=fr.result; };
+    fr.onerror=()=>rej(new Error('파일 읽기 실패')); fr.readAsDataURL(file);
+  });
+}
+async function onPhoto(e){
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  if(!f.type.startsWith('image/')){ toast('사진 파일만 올릴 수 있어요.'); return; }
+  try{ photoURL=await compressImage(f); const im=new Image(); im.onload=()=>{ photo=im; arrowsN=[]; ec.width=im.width; ec.height=im.height; drawEditor(); $('photoDrop').classList.add('hidden'); $('editWrap').classList.remove('hidden'); }; im.src=photoURL; }
+  catch(err){ toast(err.message); }
+}
+$('fCam').onchange=onPhoto; $('fFile').onchange=onPhoto;
+$('eNew').onclick=()=>{ photo=null; photoURL=null; arrowsN=[]; $('photoDrop').classList.remove('hidden'); $('editWrap').classList.add('hidden'); };
+$('eUndo').onclick=()=>{ arrowsN.pop(); drawEditor(); };
+
+function drawArrowOn(c2, w, h, a, color){
+  const x1=a[0]*w,y1=a[1]*h,x2=a[2]*w,y2=a[3]*h, lw=Math.max(5,w/90), hl=lw*3.4, ang=Math.atan2(y2-y1,x2-x1);
+  c2.save(); c2.lineCap='round';
+  [[ '#ffffff', lw+5 ],[ color, lw ]].forEach(([col,l],i)=>{
+    c2.strokeStyle=col; c2.fillStyle=col; c2.lineWidth=l;
+    c2.beginPath(); c2.moveTo(x1,y1); c2.lineTo(x2-Math.cos(ang)*hl*0.7,y2-Math.sin(ang)*hl*0.7); c2.stroke();
+    const h2=hl+(i===0?5:0); c2.beginPath(); c2.moveTo(x2+(i===0?Math.cos(ang)*3:0),y2+(i===0?Math.sin(ang)*3:0)); c2.lineTo(x2-h2*Math.cos(ang-0.45),y2-h2*Math.sin(ang-0.45)); c2.lineTo(x2-h2*Math.cos(ang+0.45),y2-h2*Math.sin(ang+0.45)); c2.closePath(); c2.fill();
+  });
+  c2.fillStyle=color; c2.beginPath(); c2.arc(x1,y1,lw*1.1,0,7); c2.fill();
+  c2.restore();
+}
+function drawEditor(){
+  if(!photo) return; ectx.drawImage(photo,0,0,ec.width,ec.height);
+  arrowsN.forEach(a=>drawArrowOn(ectx,ec.width,ec.height,a,'#e11d48'));
+  if(eDrag) drawArrowOn(ectx,ec.width,ec.height,[eDrag.x1,eDrag.y1,eDrag.x2,eDrag.y2],'#4f6bff');
+}
+function toNorm(e){ const r=ec.getBoundingClientRect(); return {x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)), y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))}; }
+ec.addEventListener('pointerdown',e=>{ if(!photo) return; if(arrowsN.length>=3){ toast('화살표는 3개까지 그릴 수 있어요.'); return; } e.preventDefault(); ec.setPointerCapture(e.pointerId); const p=toNorm(e); eDrag={x1:p.x,y1:p.y,x2:p.x,y2:p.y}; });
+ec.addEventListener('pointermove',e=>{ if(!eDrag) return; const p=toNorm(e); eDrag.x2=p.x; eDrag.y2=p.y; drawEditor(); });
+ec.addEventListener('pointerup',()=>{ if(!eDrag) return; const a=eDrag; eDrag=null; if(Math.hypot(a.x2-a.x1,a.y2-a.y1)>0.05) arrowsN.push([a.x1,a.y1,a.x2,a.y2].map(v=>Math.round(v*1000)/1000)); drawEditor(); });
+
+$('fSubmit').onclick=async ()=>{
+  const title=$('fTitle').value.trim(), body=$('fBody').value.trim(), source=$('fSource').value.trim();
+  if(!title){ toast('사례 이름을 써 주세요.'); return; }
+  if(body.length<10){ toast('탄성력이 어떻게 이용되는지 10자 이상 써 주세요.'); return; }
+  if(!photoURL){ toast('사진을 올려 주세요.'); return; }
+  if(arrowsN.length<1){ toast('사진 위에 탄성력 방향 화살표를 1개 이상 그려 주세요.'); return; }
+  $('fSubmit').disabled=true;
+  try{
+    toast('사진을 올리는 중이에요… 잠시만요!', 8000);
+    const up=await gas({action:'upload',id:me.id,nick:me.nick,image:photoURL});
+    if(!up || !up.ok){ toast(up&&up.err==='limit'?'잠시 후에 다시 올려 주세요.':'사진 올리기에 실패했어요. 다시 시도해 주세요.'); $('fSubmit').disabled=false; return; }
+    imgCache.set(up.fileId, photoURL);
+    const r=await rpc('elastic_add_post',{p_id:me.id,p_nick:me.nick,p_title:title,p_body:body,p_source:source,p_image_id:up.fileId,p_arrows:arrowsN});
+    if(r.status==='ok'){ toast('📌 담벼락에 붙였어요!'); $('fTitle').value=''; $('fBody').value=''; $('fSource').value=''; $('fCnt').textContent='0'; $('eNew').click(); loadWall(); }
+    else if(r.status==='limit') toast('사례는 한 사람당 3개까지 올릴 수 있어요.');
+    else if(r.status==='closed') toast('지금은 담벼락이 닫혀 있어요.');
+    else toast('올리기에 실패했어요. 다시 시도해 주세요.');
+  }catch(e){ toast('올리기 실패: '+(e.message||e)); }
+  $('fSubmit').disabled=false;
+};
+
+function renderPhoto(canvas, url, arrows){
+  const im=new Image(); im.onload=()=>{ canvas.width=im.width; canvas.height=im.height; const c2=canvas.getContext('2d'); c2.drawImage(im,0,0); (arrows||[]).forEach(a=>drawArrowOn(c2,im.width,im.height,a,'#e11d48')); }; im.src=url;
+}
+/* 사진은 구글 드라이브(Apps Script)에 저장 — Supabase에는 글자만 저장 */
+async function gas(payload){
+  if(!CFG.APPS_SCRIPT_URL) throw new Error('config.js 에 APPS_SCRIPT_URL 을 넣어 주세요.');
+  const res=await fetch(CFG.APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
+  return res.json();
+}
+const imgWait=new Map(); let imgActive=0; const imgQueue=[];
+function pumpImg(){ while(imgActive<3 && imgQueue.length){ const job=imgQueue.shift(); imgActive++;
+  fetch(CFG.APPS_SCRIPT_URL+'?action=img&id='+encodeURIComponent(job.id)).then(r=>r.json()).then(j=>{ if(j&&j.ok){ imgCache.set(job.id,j.data); job.res(j.data); } else job.res(null); })
+    .catch(()=>job.res(null)).finally(()=>{ imgActive--; imgWait.delete(job.id); pumpImg(); }); } }
+function getImage(fileId){
+  if(!fileId) return Promise.resolve(null);
+  if(imgCache.has(fileId)) return Promise.resolve(imgCache.get(fileId));
+  if(imgWait.has(fileId)) return imgWait.get(fileId);
+  const pr=new Promise(res=>{ imgQueue.push({id:fileId,res}); }); imgWait.set(fileId,pr); pumpImg(); return pr;
+}
+function postCard(p, opts){
+  const cvs=el('canvas'); const rot=((p.id*37)%7-3)*0.6;
+  const card=el('div',{class:'post', style:`background:${COLORS[p.id%COLORS.length]};--rot:${rot}deg`},
+    cvs, el('h3',{text:p.title}), el('p',{text:p.body}),
+    el('div',{class:'meta'}, el('span',{text:`✏️ ${classLabel(p.class_no)} · ${p.nickname}`+(opts.teacher?` (${p.student_id})`:'')}), el('span',{text:p.source?('출처: '+p.source):''})));
+  if(opts.onDelete){ card.append(el('button',{class:'del',text:'🗑 삭제',onclick:ev=>{ ev.stopPropagation(); opts.onDelete(p); }})); }
+  card.addEventListener('click',()=>openBig(p,opts.teacher));
+  getImage(p.image_id).then(u=>{ if(u) renderPhoto(cvs,u,p.arrows); }).catch(()=>{});
+  return card;
+}
+async function openBig(p, teacher){
+  const cvs=el('canvas',{style:'width:100%;height:auto;border-radius:14px;max-height:62vh;object-fit:contain'});
+  const ov=el('div',{class:'overlay',onclick:e=>{ if(e.target===ov) ov.remove(); }});
+  const m=el('div',{class:'modal wide'}, cvs, el('h2',{text:p.title,style:'margin-top:14px;font-size:36px'}), el('p',{text:p.body,style:'font-size:24px;white-space:pre-wrap'}),
+    el('p',{text:`✏️ ${classLabel(p.class_no)} · ${p.nickname}`+(p.source?'  ·  출처: '+p.source:''),style:'color:#64748b'}), el('div',{class:'acts'}, el('button',{class:'btn-pri',text:'닫기',onclick:()=>ov.remove()})));
+  ov.append(m); document.body.append(ov);
+  try{ const u=await getImage(p.image_id); if(u) renderPhoto(cvs,u,p.arrows); }catch(e){}
+}
+let sClass='all';
+function renderClassChips(box, rows, cur, onPick, grade){
+  box.innerHTML=''; const CC=CFG.CLASS_COUNT||7;
+  const grades=[...new Set([String(grade||'1'),...rows.map(p=>p.class_no[0])])].sort();
+  const opts=[['all',`전체 (${rows.length})`]];
+  grades.forEach(g=>{ for(let c=1;c<=CC;c++){ const cn=g+String(c).padStart(2,'0'); const n=rows.filter(p=>p.class_no===cn).length; opts.push([cn,(grades.length>1?g+'학년 ':'')+c+'반 ('+n+')']); } });
+  rows.forEach(p=>{ if(!opts.some(o=>o[0]===p.class_no)) opts.push([p.class_no,classLabel(p.class_no)]); });
+  opts.forEach(([v,t])=>box.append(el('button',{class:cur===v?'active':'',text:t,onclick:()=>onPick(v)})));
+}
+async function loadWall(){
+  if(!me || !settings.wall_open) return;
+  try{
+    const rows=await rpc('elastic_wall',{p_id:me.id,p_nick:me.nick})||[];
+    const mine=rows.filter(r=>r.mine).length;
+    $('postCount').textContent = `(내가 올린 사례 ${mine}/3)`;
+    $('wForm').classList.toggle('hidden', false);
+    $('fSubmit').disabled = mine>=3;
+    const wall=$('wall'); wall.innerHTML='';
+    renderClassChips($('sChips'), rows, sClass, v=>{ sClass=v; loadWall(); }, me.id[0]);
+    const list=rows.filter(p=>sClass==='all'||p.class_no===sClass);
+    if(!rows.length){ $('wallMsg').textContent='🔒 내 사례를 먼저 올리면 모든 반 친구들의 사례를 볼 수 있어요!'; }
+    else if(!list.length){ $('wallMsg').textContent='이 반에는 아직 올라온 사례가 없어요.'; }
+    else { $('wallMsg').textContent=''; list.forEach(p=>wall.append(postCard(p,{onDelete:p.mine?async q=>{ const ok=await dialog({title:'내 글 삭제',message:`“${q.title}” 사례를 지울까요?`,okText:'삭제',danger:true}); if(ok){ await rpc('elastic_delete_my_post',{p_id:me.id,p_nick:me.nick,p_post:q.id}); loadWall(); } }:null}))); }
+  }catch(e){ $('wallMsg').textContent='불러오기 오류: '+(e.message||e); }
+}
+$('wRefresh').onclick=loadWall;
+setInterval(()=>{ if(curTab==='wall' && document.visibilityState==='visible' && !document.querySelector('.overlay')) loadWall(); }, 20000);
+
+/* ================= 교사 모드 ================= */
+let tpw=null, tView='wall', tClass='all', tPosts=[], tTimer=null;
+$('teacherBtn').onclick=async ()=>{
+  const pw=await dialog({title:'교사 모드',message:'교사용 비밀번호를 입력하세요.',input:'password',okText:'들어가기'});
+  if(!pw) return;
+  try{ const ok=await rpc('elastic_teacher_login',{p_pw:pw}); if(!ok){ toast('비밀번호가 틀렸어요.'); return; }
+    tpw=pw; $('teacher').classList.remove('hidden'); updateSwitches(); showTView('wall');
+    clearInterval(tTimer); tTimer=setInterval(()=>{ if(!document.querySelector('.overlay')) refreshT(); },15000);
+  }catch(e){ toast('연결 오류: '+(e.message||e)); }
+};
+$('tClose').onclick=()=>{ $('teacher').classList.add('hidden'); tpw=null; clearInterval(tTimer); };
+function updateSwitches(){
+  $('swP').textContent='① 방향 찾기: '+(settings.practice_open?'열림 ✅':'닫힘 🔒'); $('swP').classList.toggle('on',settings.practice_open);
+  $('swW').textContent='② 담벼락: '+(settings.wall_open?'열림 ✅':'닫힘 🔒'); $('swW').classList.toggle('on',settings.wall_open);
+}
+async function setTabs(p,w){ try{ const ok=await rpc('elastic_teacher_tabs',{p_pw:tpw,p_practice:p,p_wall:w}); if(ok){ settings={practice_open:p,wall_open:w}; updateSwitches(); applyTabs(); toast('학생 화면에 곧 반영돼요.'); } }catch(e){ toast('변경 실패'); } }
+$('swP').onclick=()=>setTabs(!settings.practice_open, settings.wall_open);
+$('swW').onclick=()=>setTabs(settings.practice_open, !settings.wall_open);
+document.querySelectorAll('.t-nav button').forEach(b=>b.onclick=()=>showTView(b.dataset.tv));
+function showTView(v){ tView=v; document.querySelectorAll('.t-nav button').forEach(b=>b.classList.toggle('active',b.dataset.tv===v)); ['wall','prog','nick'].forEach(k=>$('tv-'+k).classList.toggle('hidden',k!==v)); refreshT(); }
+function refreshT(){ if(!tpw) return; if(tView==='wall') loadTWall(); else loadTStudents(); }
+
+async function loadTWall(){
+  try{ tPosts=await rpc('elastic_teacher_posts',{p_pw:tpw})||[]; }catch(e){ $('tWallMsg').textContent='불러오기 오류'; return; }
+  renderClassChips($('clsChips'), tPosts, tClass, v=>{ tClass=v; loadTWall(); }, '1');
+  const list=tPosts.filter(p=>tClass==='all'||p.class_no===tClass);
+  const wall=$('tWall'); wall.innerHTML='';
+  $('tWallMsg').textContent=list.length?'':'아직 올라온 사례가 없어요.';
+  list.forEach(p=>wall.append(postCard(p,{teacher:true,onDelete:async q=>{ const ok=await dialog({title:'사례 삭제',message:`${q.nickname}의 “${q.title}”를 삭제할까요? (되돌릴 수 없어요)`,okText:'삭제',danger:true}); if(ok){ await rpc('elastic_teacher_delete',{p_pw:tpw,p_post:q.id}); loadTWall(); } }})));
+}
+async function loadTStudents(){
+  let rows=[]; try{ rows=await rpc('elastic_teacher_students',{p_pw:tpw})||[]; }catch(e){ return; }
+  const pend=rows.filter(r=>r.pending_nickname);
+  $('pendBadge').textContent=pend.length?`(${pend.length})`:'';
+  if(tView==='prog'){
+    const box=$('tv-prog'); box.innerHTML='';
+    const groups={}; rows.forEach(r=>{ (groups[r.student_id.slice(0,3)]=groups[r.student_id.slice(0,3)]||[]).push(r); });
+    if(!rows.length) box.append(el('div',{class:'empty',text:'아직 입장한 학생이 없어요.'}));
+    Object.keys(groups).sort().forEach(cn=>{
+      const g=groups[cn], done=g.filter(r=>r.solved>=SCN.length).length;
+      box.append(el('h2',{text:`${classLabel(cn)} — ${SCN.length}문제 모두 맞힌 학생 ${done}/${g.length}명`,style:"font-family:Jua,sans-serif;font-weight:400"}));
+      const tb=el('table'); tb.append(el('tr',null,el('th',{text:'학번'}),el('th',{text:'닉네임'}),el('th',{text:'맞힌 문제'}),el('th',{text:'진행'}),el('th',{text:'시도 횟수'}),el('th',{text:'올린 사례'})));
+      g.forEach(r=>{ const bar=el('div',{class:'bar'}); bar.append(el('i',{style:`width:${Math.round(r.solved/SCN.length*100)}%`}));
+        tb.append(el('tr',null,el('td',{text:r.student_id}),el('td',{text:r.nickname}),el('td',{text:`${r.solved}/${SCN.length}`}),el('td',null,bar),el('td',{text:String(r.tries)}),el('td',{text:String(r.posts)}))); });
+      box.append(tb);
+    });
+  } else {
+    const box=$('tv-nick'); box.innerHTML='';
+    box.append(el('h2',{text:`닉네임 변경 요청 ${pend.length}건`,style:"font-family:Jua,sans-serif;font-weight:400"}));
+    if(pend.length){ const tb=el('table'); tb.append(el('tr',null,el('th',{text:'학번'}),el('th',{text:'지금 닉네임'}),el('th',{text:'바꾸고 싶은 닉네임'}),el('th',{text:''})));
+      pend.forEach(r=>tb.append(el('tr',{class:'pending'},el('td',{text:r.student_id}),el('td',{text:r.nickname}),el('td',{text:r.pending_nickname}),
+        el('td',null,el('button',{class:'btn-ok',text:'승인',onclick:async()=>{ await rpc('elastic_teacher_nick',{p_pw:tpw,p_student:r.student_id,p_new:r.pending_nickname}); loadTStudents(); }}),' ',
+          el('button',{class:'btn-bad',text:'거절',onclick:async()=>{ await rpc('elastic_teacher_nick',{p_pw:tpw,p_student:r.student_id,p_new:null}); loadTStudents(); }})))));
+      box.append(tb); }
+    box.append(el('h2',{text:'전체 학생 닉네임',style:"font-family:Jua,sans-serif;font-weight:400"}));
+    const tb=el('table'); tb.append(el('tr',null,el('th',{text:'학번'}),el('th',{text:'닉네임'}),el('th',{text:'관리'})));
+    rows.forEach(r=>tb.append(el('tr',null,el('td',{text:r.student_id}),el('td',{text:r.nickname}),
+      el('td',null,el('button',{class:'btn-sub',text:'✏️ 닉네임 바꾸기',onclick:async()=>{ const v=await dialog({title:r.student_id+' 닉네임 바꾸기',input:'text',value:r.nickname,okText:'바꾸기'}); if(v&&v.trim()){ const ok=await rpc('elastic_teacher_nick',{p_pw:tpw,p_student:r.student_id,p_new:v.trim().slice(0,10)}); toast(ok?'바꿨어요.':'실패'); loadTStudents(); } }}),' ',
+        el('button',{class:'btn-bad',text:'기록 삭제',onclick:async()=>{ const ok=await dialog({title:'학생 기록 삭제',message:`${r.student_id} (${r.nickname})의 입장 정보·연습 기록·사례가 모두 지워져요. 이 학번으로 다시 입장할 수 있게 돼요.`,okText:'모두 삭제',danger:true}); if(ok){ await rpc('elastic_teacher_remove_student',{p_pw:tpw,p_student:r.student_id}); loadTStudents(); } }})))));
+    box.append(tb);
+  }
+}
+
+/* 시작 */
+applyTabs();
+if(!sb){ showEntry('config.js 에 Supabase 주소와 키를 먼저 넣어 주세요.'); }
+else boot();
+})();
+</script>
+</body>
+</html>
