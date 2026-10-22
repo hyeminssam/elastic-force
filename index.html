@@ -102,6 +102,9 @@ main{flex:1;max-width:1240px;width:100%;margin:0 auto;padding:0 20px 20px}
 #entry{position:fixed;inset:0;background:linear-gradient(135deg,#4f6bff,#8b5cf6);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
 #entry .modal{max-width:480px}
 #entry .logo{font-size:64px;text-align:center}
+.nick-row{display:flex;gap:8px}
+.nick-row input{flex:1;min-width:0}
+.dice{white-space:nowrap;padding:12px 14px}
 
 /* teacher */
 #teacher{position:fixed;inset:0;background:var(--bg);z-index:45;overflow:auto}
@@ -135,7 +138,7 @@ footer{text-align:center;color:#8390ad;font-size:12px;padding:14px 20px 20px;lin
     <div class="logo">🌀</div>
     <h2 style="text-align:center">탄성력 탐구실 입장</h2>
     <div class="field"><label>학번 (5자리)</label><input id="inId" inputmode="numeric" maxlength="5" placeholder="예: 10601"></div>
-    <div class="field"><label>닉네임 (10자 이내)</label><input id="inNick" maxlength="10" placeholder="별명을 써 주세요"></div>
+    <div class="field"><label>닉네임 (10자 이내)</label><div class="nick-row"><input id="inNick" maxlength="10" placeholder="별명을 써 주세요"><button type="button" class="btn-sub dice" id="diceBtn" title="랜덤 닉네임">🎲 랜덤</button></div><div class="hint" style="font-size:16px;color:var(--sub);margin-top:4px">짓기 어려우면 🎲 랜덤을 눌러 보세요. 마음에 들 때까지 여러 번 눌러도 돼요!</div></div>
     <div class="notice">⚠️ 닉네임에 실명을 쓰지 마세요!</div>
     <div class="field hint" style="font-size:16px;color:var(--sub)">한 번 입장하면 학번과 닉네임을 바꿀 수 없어요. 바꾸려면 선생님 승인이 필요해요.</div>
     <div id="entryMsg" class="fb bad hidden"></div>
@@ -295,7 +298,7 @@ function el(tag, attrs, ...kids){
 }
 
 /* 간단한 입력 창 */
-function dialog({title, message, input, value, okText, cancel=true, danger=false}){
+function dialog({title, message, input, value, okText, cancel=true, danger=false, random=false}){
   return new Promise(res=>{
     const inp = input ? el('input',{maxlength:'30', type: input==='password'?'password':'text'}) : null;
     if(inp && value) inp.value=value;
@@ -304,10 +307,30 @@ function dialog({title, message, input, value, okText, cancel=true, danger=false
     const ok = el('button',{class: danger?'btn-bad':'btn-pri', text: okText||'확인', onclick:()=>close(inp?inp.value:true)});
     const m = el('div',{class:'modal'}, el('h2',{text:title}), message?el('p',{text:message}):null, inp,
       el('div',{class:'acts'}, cancel?el('button',{class:'btn-sub',text:'취소',onclick:()=>close(null)}):null, ok));
+    if(inp && random){ const row=el('div',{class:'nick-row'}); inp.replaceWith(row); row.append(inp, el('button',{type:'button',class:'btn-sub dice',text:'🎲 랜덤',onclick:()=>{ inp.value=randomNick(); }})); }
     ov.append(m); document.body.append(ov);
     if(inp){ inp.focus(); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') ok.click(); }); }
   });
 }
+
+/* ================= 랜덤 닉네임 =================
+   놀림거리가 될 수 있는 동물(돼지·하마·곰·원숭이·거북이·여우·개·닭·쥐·뱀 등)과
+   외모·성격을 깎아내리는 꾸밈말(뚱뚱한·느린·졸린·배고픈 등)은 일부러 넣지 않았어요. */
+const NICK_ADJ=['노래하는','춤추는','달리는','웃는','반짝이는','용감한','씩씩한','똑똑한','친절한','신나는','빛나는',
+  '책읽는','탐험하는','연구하는','발명하는','꿈꾸는','수영하는','실험하는','관찰하는','행복한','지혜로운','상냥한',
+  '멋진','든든한','재빠른','명랑한','다정한','차분한','슬기로운','활기찬','별을찾는','하늘을나는','그림그리는','기타치는',
+  '피아노치는','축구하는','농구하는','여행하는','반짝반짝','용기있는','빛을모은','달빛','햇살','무지개','은하수'];
+const NICK_ANI=['기린','사자','호랑이','토끼','고양이','강아지','판다','펭귄','수달','다람쥐','고래','돌고래','부엉이',
+  '독수리','치타','코알라','해달','사슴','알파카','얼룩말','앵무새','병아리','고슴도치','너구리','미어캣','백조',
+  '표범','순록','플라밍고','올빼미','참새','종달새','물총새','라쿤','유니콘','용','불사조','페가수스','앨버트로스'];
+function randomNick(){
+  for(let i=0;i<50;i++){
+    const a=NICK_ADJ[Math.floor(Math.random()*NICK_ADJ.length)], b=NICK_ANI[Math.floor(Math.random()*NICK_ANI.length)];
+    const n=a+' '+b; if(n.length<=10) return n;
+  }
+  return '노래하는 기린';
+}
+$('diceBtn').onclick=()=>{ $('inNick').value=randomNick(); $('inNick').focus(); };
 
 /* ================= 입장 ================= */
 function showEntry(msg){
@@ -324,6 +347,7 @@ async function doEntry(){
   try{
     const r = await rpc('elastic_register',{p_id:id, p_nick:nick});
     if(r.status==='ok'){ me={id, nick:r.nickname}; lsSet(me); $('entry').classList.add('hidden'); startApp(r.pending); }
+    else if(r.status==='dup'){ m.textContent='같은 반에 이미 있는 닉네임이에요. 🎲 랜덤을 누르거나 다른 닉네임을 써 주세요.'; m.classList.remove('hidden'); }
     else if(r.status==='taken'){ m.textContent='이 학번은 이미 다른 닉네임으로 등록되어 있어요. 내 학번이 맞다면 선생님께 말씀드리세요.'; m.classList.remove('hidden'); }
     else { m.textContent='학번 또는 닉네임을 다시 확인해 주세요.'; m.classList.remove('hidden'); }
   }catch(e){ m.textContent='연결 오류: '+(e.message||e); m.classList.remove('hidden'); }
@@ -355,10 +379,11 @@ function startApp(pending){
 
 $('nickReqBtn').onclick = async ()=>{
   if(!me) return;
-  const v = await dialog({title:'닉네임 변경 요청', message:'새 닉네임을 써 주세요. 선생님이 승인하면 바뀌어요. (실명 금지!)', input:'text', okText:'요청 보내기'});
+  const v = await dialog({title:'닉네임 변경 요청', message:'새 닉네임을 써 주세요. 선생님이 승인하면 바뀌어요. (실명 금지!)', input:'text', okText:'요청 보내기', random:true});
   if(!v || !v.trim()) return;
   if(v.trim().length>10){ toast('10자 이내로 써 주세요.'); return; }
-  try{ const ok = await rpc('elastic_request_nick',{p_id:me.id,p_nick:me.nick,p_new:v.trim()}); toast(ok?'요청을 보냈어요. 선생님 승인을 기다려 주세요.':'요청에 실패했어요.'); }
+  try{ const r = await rpc('elastic_request_nick',{p_id:me.id,p_nick:me.nick,p_new:v.trim()});
+    toast(r&&r.status==='ok'?'요청을 보냈어요. 선생님 승인을 기다려 주세요.':(r&&r.status==='dup'?'같은 반에 이미 있는 닉네임이에요. 🎲 랜덤을 눌러 보세요!':'요청에 실패했어요.'),3200); }
   catch(e){ toast('연결 오류'); }
 };
 
@@ -914,13 +939,13 @@ async function loadTStudents(){
     box.append(el('h2',{text:`닉네임 변경 요청 ${pend.length}건`,style:"font-family:Jua,sans-serif;font-weight:400"}));
     if(pend.length){ const tb=el('table'); tb.append(el('tr',null,el('th',{text:'학번'}),el('th',{text:'지금 닉네임'}),el('th',{text:'바꾸고 싶은 닉네임'}),el('th',{text:''})));
       pend.forEach(r=>tb.append(el('tr',{class:'pending'},el('td',{text:r.student_id}),el('td',{text:r.nickname}),el('td',{text:r.pending_nickname}),
-        el('td',null,el('button',{class:'btn-ok',text:'승인',onclick:async()=>{ await rpc('elastic_teacher_nick',{p_pw:tpw,p_student:r.student_id,p_new:r.pending_nickname}); loadTStudents(); }}),' ',
+        el('td',null,el('button',{class:'btn-ok',text:'승인',onclick:async()=>{ const x=await rpc('elastic_teacher_nick',{p_pw:tpw,p_student:r.student_id,p_new:r.pending_nickname}); if(x&&x.status==='dup') toast('그사이 같은 반의 다른 학생이 이 닉네임을 쓰고 있어요. 거절해 주세요.',3500); loadTStudents(); }}),' ',
           el('button',{class:'btn-bad',text:'거절',onclick:async()=>{ await rpc('elastic_teacher_nick',{p_pw:tpw,p_student:r.student_id,p_new:null}); loadTStudents(); }})))));
       box.append(tb); }
     box.append(el('h2',{text:'전체 학생 닉네임',style:"font-family:Jua,sans-serif;font-weight:400"}));
     const tb=el('table'); tb.append(el('tr',null,el('th',{text:'학번'}),el('th',{text:'닉네임'}),el('th',{text:'관리'})));
     rows.forEach(r=>tb.append(el('tr',null,el('td',{text:r.student_id}),el('td',{text:r.nickname}),
-      el('td',null,el('button',{class:'btn-sub',text:'✏️ 닉네임 바꾸기',onclick:async()=>{ const v=await dialog({title:r.student_id+' 닉네임 바꾸기',input:'text',value:r.nickname,okText:'바꾸기'}); if(v&&v.trim()){ const ok=await rpc('elastic_teacher_nick',{p_pw:tpw,p_student:r.student_id,p_new:v.trim().slice(0,10)}); toast(ok?'바꿨어요.':'실패'); loadTStudents(); } }}),' ',
+      el('td',null,el('button',{class:'btn-sub',text:'✏️ 닉네임 바꾸기',onclick:async()=>{ const v=await dialog({title:r.student_id+' 닉네임 바꾸기',input:'text',value:r.nickname,okText:'바꾸기',random:true}); if(v&&v.trim()){ const x=await rpc('elastic_teacher_nick',{p_pw:tpw,p_student:r.student_id,p_new:v.trim().slice(0,10)}); toast(x&&x.status==='ok'?'바꿨어요.':(x&&x.status==='dup'?'같은 반에 이미 있는 닉네임이에요.':'실패')); loadTStudents(); } }}),' ',
         el('button',{class:'btn-bad',text:'기록 삭제',onclick:async()=>{ const ok=await dialog({title:'학생 기록 삭제',message:`${r.student_id} (${r.nickname})의 입장 정보·연습 기록·사례가 모두 지워져요. 이 학번으로 다시 입장할 수 있게 돼요.`,okText:'모두 삭제',danger:true}); if(ok){ await rpc('elastic_teacher_remove_student',{p_pw:tpw,p_student:r.student_id}); loadTStudents(); } }})))));
     box.append(tb);
   }
