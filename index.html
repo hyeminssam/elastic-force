@@ -446,7 +446,8 @@ function startApp(pending){
   $('meChip').textContent = `${classLabel(me.id.slice(0,3))} ${parseInt(me.id.slice(3),10)}번 · ${me.nick}`;
   if(pending) toast(`닉네임 변경 요청(“${pending}”)을 선생님이 확인 중이에요.`, 3500);
   if(started) return; started=true;
-  pollSettings(); setInterval(pollSettings, 4000);
+  pollSettings(); setInterval(pollSettings, 3000);
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') pollSettings(); });
   loadProgress();
   renderScene();
   requestAnimationFrame(loop);
@@ -479,17 +480,21 @@ function applyTabs(){
   $('wLocked').classList.toggle('hidden', settings.wall_open);
   $('wBody').classList.toggle('hidden', !settings.wall_open);
 }
+let pollOk=false, pollFail=0;
 async function pollSettings(){
   if(!sb) return;
   try{
-    const { data } = await sb.from('elastic_settings').select('practice_open,report_open,wall_open').eq('id',1).single();
+    const data = await rpc('elastic_get_settings',{});
     if(data){
       const wasWall = settings.wall_open, wasReport = settings.report_open;
-      settings=data; applyTabs(); updateSwitches();
+      const changed = data.practice_open!==settings.practice_open || data.report_open!==settings.report_open || data.wall_open!==settings.wall_open;
+      settings={practice_open:!!data.practice_open, report_open:!!data.report_open, wall_open:!!data.wall_open}; applyTabs(); updateSwitches();
       if(!wasWall && data.wall_open && curTab==='wall') loadWall();
       if(!wasReport && data.report_open && curTab==='report') loadReports();
+      if(changed && started && pollOk) toast('선생님이 탭을 '+(data.report_open&&!wasReport||data.wall_open&&!wasWall?'열었어요 🔓':'바꿨어요'));
+      pollOk=true; pollFail=0;
     }
-  }catch(e){}
+  }catch(e){ pollFail++; if(pollFail===3) toast('서버 연결이 불안정해요. 새로고침해 보세요.',3500); console.warn('탭 상태 읽기 실패',e); }
 }
 
 /* ================= 탭 1: 탄성력 방향 찾기 ================= */
