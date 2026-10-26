@@ -127,6 +127,38 @@ th{background:#eef2ff}
 .pending{background:#fffbeb}
 #toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:#1f2a44;color:#fff;padding:14px 24px;border-radius:14px;font-size:19px;z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
 #toast.show{opacity:1}
+/* report */
+.r-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:24px}
+@media (max-width:900px){.r-grid{grid-template-columns:1fr}}
+.r-h{font-family:'Jua',sans-serif;font-weight:400;font-size:28px;margin:0 0 10px}
+.r-steps{margin:0 0 12px;padding-left:28px;font-size:21px}
+.r-steps li{margin:4px 0}
+.tip-box{background:#eef2ff;border-left:6px solid var(--pri);border-radius:12px;padding:12px 14px;font-size:18px;margin:10px 0}
+.r-pick{display:inline-block;padding:12px 20px;border-radius:14px;cursor:pointer;font-weight:700}
+.r-canvas{width:100%;height:auto;display:block;border-radius:14px;border:3px solid var(--line);background:#f1f5f9;margin-top:8px;touch-action:none;cursor:crosshair}
+.cover-tip{margin-top:12px;background:#fff7ed;border:2px solid #fdba74;border-radius:12px;padding:10px 14px;font-size:18px;color:#9a3412}
+.r-preview{width:100%;max-height:360px;object-fit:contain;border-radius:14px;border:3px solid var(--line);background:#f1f5f9;margin-top:12px}
+.hint-s{font-size:16px;color:var(--sub);margin-top:8px}
+.r-result .empty{padding:60px 20px;border:3px dashed var(--line);border-radius:18px}
+.fbcard{border-radius:18px;border:3px solid #c7d2fe;background:#f8faff;padding:18px}
+.fbcard .praise{font-size:22px;font-weight:700;color:#166534;background:#dcfce7;border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.fbitem{display:flex;gap:12px;align-items:flex-start;background:#fff;border-radius:12px;padding:12px 14px;margin:8px 0;border:2px solid var(--line);font-size:19px}
+.fbitem .st{flex:none;border-radius:999px;padding:4px 12px;font-weight:900;font-size:16px;white-space:nowrap}
+.st.good{background:#dcfce7;color:#166534}.st.fix{background:#fef3c7;color:#92400e}.st.missing{background:#fee2e2;color:#991b1b}
+.fbitem b{display:block;font-size:18px}
+.fbcard .next{font-size:20px;background:#eef2ff;border-radius:12px;padding:12px 14px;margin-top:12px}
+.fbcard .note{font-size:14px;color:var(--sub);margin-top:10px}
+.loading{text-align:center;padding:50px 10px;font-size:22px}
+.loading .spin{width:56px;height:56px;border:6px solid #c7d2fe;border-top-color:var(--pri);border-radius:50%;margin:0 auto 14px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hist{display:grid;grid-template-columns:160px 1fr;gap:14px;background:#fff;border:2px solid var(--line);border-radius:16px;padding:12px;margin-bottom:12px}
+@media (max-width:700px){.hist{grid-template-columns:1fr}}
+.hist img{width:100%;border-radius:10px;cursor:pointer;background:#eee;min-height:80px;object-fit:cover}
+.trep{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:16px;background:#fff;border-radius:16px;box-shadow:var(--shadow);padding:14px;margin-bottom:16px;position:relative}
+@media (max-width:800px){.trep{grid-template-columns:1fr}}
+.trep img{width:100%;border-radius:12px;cursor:zoom-in;background:#eee;min-height:120px}
+.trep .del{position:absolute;top:10px;right:10px;background:rgba(225,29,72,.92);color:#fff;font-size:15px;padding:6px 12px}
+.trep .who{font-weight:900;font-size:20px;margin-bottom:6px}
 footer{text-align:center;color:#8390ad;font-size:12px;padding:14px 20px 20px;line-height:1.6}
 </style>
 </head>
@@ -155,7 +187,8 @@ footer{text-align:center;color:#8390ad;font-size:12px;padding:14px 20px 20px;lin
 
 <div class="tabs">
   <button class="tab active" data-tab="practice">① 탄성력 방향 찾기 <span class="lock" id="lockP"></span></button>
-  <button class="tab" data-tab="wall">② 탄성력 사례 담벼락 <span class="lock" id="lockW"></span></button>
+  <button class="tab" data-tab="report">② 실험 답 올리기 <span class="lock" id="lockR"></span></button>
+  <button class="tab" data-tab="wall">③ 탄성력 사례 담벼락 <span class="lock" id="lockW"></span></button>
 </div>
 
 <main>
@@ -190,7 +223,43 @@ footer{text-align:center;color:#8390ad;font-size:12px;padding:14px 20px 20px;lin
     </div>
   </section>
 
-  <!-- 탭 2: 사례 담벼락 -->
+  <!-- 탭 2: 실험 답 올리기 -->
+  <section class="panel hidden" id="tab-report">
+    <div id="rLocked" class="locked hidden"><div class="big">🔒</div><h2>아직 열리지 않았어요</h2><p>실험이 끝나면 선생님이 열어 주실 거예요.</p></div>
+    <div id="rBody">
+      <div class="r-grid">
+        <div>
+          <h2 class="r-h">📖 교과서 162쪽 답을 찍어 올려요</h2>
+          <ol class="r-steps">
+            <li><b>측정 표</b>: 3회 측정값과 <b>평균</b></li>
+            <li><b>그래프</b>: 가로축·세로축 이름과 <b>단위</b>, 점과 직선</li>
+            <li><b>정리하기 1</b>: 탄성력의 방향</li>
+            <li><b>정리하기 2</b>: 늘어난 길이와 탄성력의 관계</li>
+          </ol>
+          <div class="tip-box">📷 <b>잘 찍는 법</b> — 교과서를 책상에 평평하게 펴고, 위에서 똑바로 찍어요. 표·그래프·정리하기가 <b>한 장에 다 나오게</b>, 그림자 없이 밝게!</div>
+          <div class="warnbox">🙅 이름·얼굴이 사진에 나오지 않게 해 주세요. 답이 쓰인 부분만 찍어요.</div>
+          <div class="p-btns">
+            <label class="btn-pri r-pick">📷 사진 찍기<input type="file" accept="image/*" capture="environment" id="rCam" hidden></label>
+            <label class="btn-sub r-pick">🗂️ 사진 고르기<input type="file" accept="image/*" id="rFile" hidden></label>
+          </div>
+          <div id="rEdit" class="hidden">
+            <div class="cover-tip">🖍️ <b>이름·학번이 보이면 가려 주세요!</b> 사진 위를 끌면 검은 상자로 가려져요.</div>
+            <canvas id="rCanvas" class="r-canvas"></canvas>
+            <div class="p-btns" style="margin-top:6px"><button class="btn-sub" id="rUndo">↶ 가린 상자 지우기</button></div>
+          </div>
+          <div class="p-btns"><button class="btn-pri hidden" id="rSubmit" style="font-size:22px;padding:14px 28px">🤖 올리고 AI 코멘트 받기</button></div>
+          <div class="hint-s" id="rCount"></div>
+        </div>
+        <div>
+          <div id="rResult" class="r-result"><div class="empty">사진을 올리면 여기에 AI 선생님의 코멘트가 나와요.<br><span style="font-size:16px">AI 코멘트는 참고용이에요. 최종 확인은 선생님이 해요.</span></div></div>
+        </div>
+      </div>
+      <h2 class="r-h" style="margin-top:26px">🗂️ 내가 올린 기록</h2>
+      <div id="rHistory"></div>
+    </div>
+  </section>
+
+  <!-- 탭 3: 사례 담벼락 -->
   <section class="panel hidden" id="tab-wall">
     <div id="wLocked" class="locked hidden"><div class="big">🔒</div><h2>아직 열리지 않았어요</h2><p>선생님이 열어 주시면 사례를 올릴 수 있어요.</p></div>
     <div id="wBody">
@@ -240,10 +309,12 @@ footer{text-align:center;color:#8390ad;font-size:12px;padding:14px 20px 20px;lin
   <div class="t-top">
     <h1>👩‍🏫 교사 모드</h1>
     <button class="switch" id="swP">① 방향 찾기: -</button>
-    <button class="switch" id="swW">② 담벼락: -</button>
+    <button class="switch" id="swR">② 실험 답: -</button>
+    <button class="switch" id="swW">③ 담벼락: -</button>
     <button class="btn-sub" id="tClose">학생 화면으로</button>
   </div>
   <div class="t-nav">
+    <button data-tv="report">📝 실험 답·AI 코멘트</button>
     <button data-tv="wall" class="active">🧱 담벼락 보기</button>
     <button data-tv="prog">📊 연습 현황</button>
     <button data-tv="nick">🏷️ 닉네임 관리 <span id="pendBadge"></span></button>
@@ -256,6 +327,10 @@ footer{text-align:center;color:#8390ad;font-size:12px;padding:14px 20px 20px;lin
     </div>
     <div id="tv-prog" class="hidden"></div>
     <div id="tv-nick" class="hidden"></div>
+    <div id="tv-report" class="hidden">
+      <div class="cls-chips" id="rClsChips"></div>
+      <div id="tReports"></div>
+    </div>
   </div>
 </div>
 
@@ -279,7 +354,7 @@ const LS = 'elastic_user_v1';
 function lsGet(){ try { return JSON.parse(localStorage.getItem(LS) || 'null'); } catch(e){ return null; } }
 function lsSet(v){ try { localStorage.setItem(LS, JSON.stringify(v)); } catch(e){} }
 let me = null;
-let settings = { practice_open: true, wall_open: false };
+let settings = { practice_open: true, report_open: false, wall_open: false };
 let curTab = 'practice';
 
 function toast(msg, ms){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'), ms||2600); }
@@ -388,11 +463,15 @@ $('nickReqBtn').onclick = async ()=>{
 };
 
 /* ================= 탭 / 설정 ================= */
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{ curTab=b.dataset.tab; applyTabs(); if(curTab==='wall') loadWall(); });
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{ curTab=b.dataset.tab; applyTabs(); if(curTab==='wall') loadWall(); if(curTab==='report') loadReports(); });
 function applyTabs(){
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===curTab));
   $('tab-practice').classList.toggle('hidden', curTab!=='practice');
   $('tab-wall').classList.toggle('hidden', curTab!=='wall');
+  $('tab-report').classList.toggle('hidden', curTab!=='report');
+  $('lockR').textContent = settings.report_open?'':'🔒';
+  $('rLocked').classList.toggle('hidden', settings.report_open);
+  $('rBody').classList.toggle('hidden', !settings.report_open);
   $('lockP').textContent = settings.practice_open?'':'🔒';
   $('lockW').textContent = settings.wall_open?'':'🔒';
   $('pLocked').classList.toggle('hidden', settings.practice_open);
@@ -403,11 +482,12 @@ function applyTabs(){
 async function pollSettings(){
   if(!sb) return;
   try{
-    const { data } = await sb.from('elastic_settings').select('practice_open,wall_open').eq('id',1).single();
+    const { data } = await sb.from('elastic_settings').select('practice_open,report_open,wall_open').eq('id',1).single();
     if(data){
-      const wasWall = settings.wall_open;
+      const wasWall = settings.wall_open, wasReport = settings.report_open;
       settings=data; applyTabs(); updateSwitches();
       if(!wasWall && data.wall_open && curTab==='wall') loadWall();
+      if(!wasReport && data.report_open && curTab==='report') loadReports();
     }
   }catch(e){}
 }
@@ -759,14 +839,14 @@ const COLORS=['#fff59d','#ffccbc','#c8e6c9','#b3e5fc','#e1bee7','#ffe0b2'];
 const imgCache=new Map();
 
 $('fBody').addEventListener('input',()=>{ $('fCnt').textContent=$('fBody').value.length; });
-function compressImage(file){
+function compressImage(file, opt){ opt=opt||{};
   return new Promise((res,rej)=>{
     const fr=new FileReader();
     fr.onload=()=>{ const im=new Image(); im.onload=()=>{
-        let max=1000, q=0.78, out='';
+        let max=opt.max||1000, q=opt.q||0.78, out=''; const LIM=opt.limit||550000;
         for(let k=0;k<5;k++){ const sc=Math.min(1,max/Math.max(im.width,im.height)); const c=document.createElement('canvas'); c.width=Math.round(im.width*sc); c.height=Math.round(im.height*sc);
-          c.getContext('2d').drawImage(im,0,0,c.width,c.height); out=c.toDataURL('image/jpeg',q); if(out.length<550000) break; max*=0.8; q-=0.08; }
-        if(out.length>=550000) rej(new Error('사진이 너무 커요')); else res(out);
+          c.getContext('2d').drawImage(im,0,0,c.width,c.height); out=c.toDataURL('image/jpeg',q); if(out.length<LIM) break; max*=0.85; q-=0.06; }
+        if(out.length>=LIM) rej(new Error('사진이 너무 커요')); else res(out);
       }; im.onerror=()=>rej(new Error('사진을 읽을 수 없어요')); im.src=fr.result; };
     fr.onerror=()=>rej(new Error('파일 읽기 실패')); fr.readAsDataURL(file);
   });
@@ -888,6 +968,79 @@ async function loadWall(){
 $('wRefresh').onclick=loadWall;
 setInterval(()=>{ if(curTab==='wall' && document.visibilityState==='visible' && !document.querySelector('.overlay')) loadWall(); }, 20000);
 
+/* ================= 탭 2: 실험 답 + AI 코멘트 ================= */
+let rPhoto=null, rBusy=false; // rPhoto: 올릴 사진이 준비됐는지
+const ST_LABEL={good:'👍 잘했어요',fix:'✏️ 다시 보기',missing:'❓ 안 보여요'};
+function fbCard(fb, opt){
+  opt=opt||{};
+  const box=el('div',{class:'fbcard'});
+  if(!fb || fb.readable===false){
+    box.append(el('div',{class:'fbitem'},el('span',{class:'st missing',text:'📷 다시 찍기'}),el('div',{text:(fb&&fb.retake)||'글씨가 잘 보이게 다시 찍어 주세요.'})));
+    box.append(el('div',{class:'note',text:'이 사진은 제출 횟수에 들어가지 않았어요.'}));
+    return box;
+  }
+  if(fb.praise) box.append(el('div',{class:'praise',text:'🌟 '+fb.praise}));
+  (fb.items||[]).forEach(it=>box.append(el('div',{class:'fbitem'},el('span',{class:'st '+(ST_LABEL[it.status]?it.status:'fix'),text:ST_LABEL[it.status]||'✏️'}),el('div',null,el('b',{text:it.name}),document.createTextNode(it.comment||'')))));
+  if(fb.next) box.append(el('div',{class:'next',text:'👉 '+fb.next}));
+  if(!opt.noNote) box.append(el('div',{class:'note',text:'🤖 AI 코멘트는 참고용이에요. 최종 확인은 선생님이 해요.'}));
+  return box;
+}
+async function onReportPhoto(e){
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  if(!f.type.startsWith('image/')){ toast('사진 파일만 올릴 수 있어요.'); return; }
+  try{ const url=await compressImage(f,{max:1600,q:0.82,limit:1150000}); const im=new Image();
+    im.onload=()=>{ rImg=im; rBoxes=[]; const c=$('rCanvas'); c.width=im.width; c.height=im.height; drawCover(); $('rEdit').classList.remove('hidden'); $('rSubmit').classList.remove('hidden'); rPhoto=true; };
+    im.src=url; }
+  catch(err){ toast(err.message); }
+}
+/* 이름·학번 가리기: 사진 위에 검은 상자를 그려서 그대로 구워 넣음 (원본은 어디에도 보내지 않음) */
+let rImg=null, rBoxes=[], rDrag=null;
+function drawCover(){ const c=$('rCanvas'), x=c.getContext('2d'); if(!rImg) return; x.drawImage(rImg,0,0,c.width,c.height); x.fillStyle='#000';
+  rBoxes.forEach(b=>x.fillRect(b[0]*c.width,b[1]*c.height,b[2]*c.width,b[3]*c.height));
+  if(rDrag){ x.save(); x.fillStyle='rgba(0,0,0,.6)'; x.strokeStyle='#f97316'; x.lineWidth=Math.max(3,c.width/300); const r=normBox(rDrag); x.fillRect(r[0]*c.width,r[1]*c.height,r[2]*c.width,r[3]*c.height); x.strokeRect(r[0]*c.width,r[1]*c.height,r[2]*c.width,r[3]*c.height); x.restore(); } }
+function normBox(d){ return [Math.min(d.x1,d.x2),Math.min(d.y1,d.y2),Math.abs(d.x2-d.x1),Math.abs(d.y2-d.y1)]; }
+function rPos(e){ const r=$('rCanvas').getBoundingClientRect(); return {x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))}; }
+$('rCanvas').addEventListener('pointerdown',e=>{ if(!rImg) return; e.preventDefault(); $('rCanvas').setPointerCapture(e.pointerId); const p=rPos(e); rDrag={x1:p.x,y1:p.y,x2:p.x,y2:p.y}; });
+$('rCanvas').addEventListener('pointermove',e=>{ if(!rDrag) return; const p=rPos(e); rDrag.x2=p.x; rDrag.y2=p.y; drawCover(); });
+$('rCanvas').addEventListener('pointerup',()=>{ if(!rDrag) return; const b=normBox(rDrag); rDrag=null; if(b[2]>0.01&&b[3]>0.01) rBoxes.push(b); drawCover(); });
+$('rUndo').onclick=()=>{ rBoxes.pop(); drawCover(); };
+function exportCovered(){ const c=$('rCanvas'); drawCover(); let q=0.82, out=c.toDataURL('image/jpeg',q); while(out.length>1250000 && q>0.4){ q-=0.08; out=c.toDataURL('image/jpeg',q); } return out; }
+$('rCam').onchange=onReportPhoto; $('rFile').onchange=onReportPhoto;
+const R_ERR={closed:'지금은 실험 답 올리기가 닫혀 있어요.',limit:'실험 답은 3번까지 올릴 수 있어요.',wait:'30초 뒤에 다시 올려 주세요.',many:'오늘은 너무 많이 올렸어요. 선생님께 말씀드려 주세요.',
+  budget:'오늘 AI 코멘트 사용량이 다 찼어요. 선생님께 말씀드려 주세요.',ai:'AI가 잠깐 바빠요. 잠시 뒤 다시 올려 주세요.',auth:'입장 정보가 맞지 않아요. 새로고침해 주세요.',size:'사진이 너무 커요. 다시 찍어 주세요.',image:'사진을 읽을 수 없어요. 다시 찍어 주세요.'};
+$('rSubmit').onclick=async ()=>{
+  if(!rPhoto || rBusy) return; rBusy=true; $('rSubmit').disabled=true;
+  const res=$('rResult'); res.innerHTML='';
+  res.append(el('div',{class:'loading'},el('div',{class:'spin'}),document.createTextNode('🤖 AI 선생님이 답을 읽고 있어요… (10~20초)')));
+  try{
+    const img=exportCovered();
+    const r=await gas({action:'report',id:me.id,nick:me.nick,image:img});
+    res.innerHTML='';
+    if(r && r.ok){
+      res.append(fbCard(r.feedback));
+      if(r.saved){ if(r.fileId) imgCache.set(r.fileId,img); rPhoto=null; rImg=null; rBoxes=[]; $('rEdit').classList.add('hidden'); $('rSubmit').classList.add('hidden'); toast('📌 올렸어요!'); loadReports(); }
+    } else {
+      res.append(el('div',{class:'fbcard'},el('div',{class:'fbitem'},el('span',{class:'st missing',text:'⚠️'}),el('div',{text:R_ERR[r&&r.err]||'올리기에 실패했어요. 다시 시도해 주세요.'}))));
+    }
+  }catch(e){ res.innerHTML=''; res.append(el('div',{class:'fbcard',text:'연결 오류: 잠시 뒤 다시 시도해 주세요.'})); }
+  rBusy=false; $('rSubmit').disabled=false;
+};
+async function loadReports(){
+  if(!me || !settings.report_open) return;
+  try{
+    const rows=await rpc('elastic_my_reports',{p_id:me.id,p_nick:me.nick})||[];
+    $('rCount').textContent=`올린 횟수 ${rows.length}/3 — 코멘트를 보고 교과서를 고친 뒤 다시 올려도 돼요.`;
+    const pick=rows.length>=3; document.querySelectorAll('.r-pick').forEach(l=>l.style.display=pick?'none':'');
+    if(pick){ $('rSubmit').classList.add('hidden'); }
+    const box=$('rHistory'); box.innerHTML='';
+    if(!rows.length){ box.append(el('div',{class:'empty',text:'아직 올린 기록이 없어요.'})); return; }
+    rows.forEach((r,i)=>{ const img=el('img',{alt:'올린 사진'}); getImage(r.image_id).then(u=>{ if(u) img.src=u; });
+      img.onclick=()=>{ if(img.src) zoomImg(img.src); };
+      box.append(el('div',{class:'hist'}, el('div',null,img,el('div',{class:'hint-s',text:`${rows.length-i}번째 · ${new Date(r.created_at).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}`})), fbCard(r.feedback,{noNote:true}))); });
+  }catch(e){}
+}
+function zoomImg(src){ const ov=el('div',{class:'overlay',onclick:()=>ov.remove()}); ov.append(el('img',{src,style:'max-width:96vw;max-height:92vh;border-radius:14px;background:#fff'})); document.body.append(ov); }
+
 /* ================= 교사 모드 ================= */
 let tpw=null, tView='wall', tClass='all', tPosts=[], tTimer=null;
 $('teacherBtn').onclick=async ()=>{
@@ -901,15 +1054,29 @@ $('teacherBtn').onclick=async ()=>{
 $('tClose').onclick=()=>{ $('teacher').classList.add('hidden'); tpw=null; clearInterval(tTimer); };
 function updateSwitches(){
   $('swP').textContent='① 방향 찾기: '+(settings.practice_open?'열림 ✅':'닫힘 🔒'); $('swP').classList.toggle('on',settings.practice_open);
-  $('swW').textContent='② 담벼락: '+(settings.wall_open?'열림 ✅':'닫힘 🔒'); $('swW').classList.toggle('on',settings.wall_open);
+  $('swR').textContent='② 실험 답: '+(settings.report_open?'열림 ✅':'닫힘 🔒'); $('swR').classList.toggle('on',settings.report_open);
+  $('swW').textContent='③ 담벼락: '+(settings.wall_open?'열림 ✅':'닫힘 🔒'); $('swW').classList.toggle('on',settings.wall_open);
 }
-async function setTabs(p,w){ try{ const ok=await rpc('elastic_teacher_tabs',{p_pw:tpw,p_practice:p,p_wall:w}); if(ok){ settings={practice_open:p,wall_open:w}; updateSwitches(); applyTabs(); toast('학생 화면에 곧 반영돼요.'); } }catch(e){ toast('변경 실패'); } }
-$('swP').onclick=()=>setTabs(!settings.practice_open, settings.wall_open);
-$('swW').onclick=()=>setTabs(settings.practice_open, !settings.wall_open);
+async function setTabs(p,r,w){ try{ const ok=await rpc('elastic_teacher_tabs',{p_pw:tpw,p_practice:p,p_report:r,p_wall:w}); if(ok){ settings={practice_open:p,report_open:r,wall_open:w}; updateSwitches(); applyTabs(); toast('학생 화면에 곧 반영돼요.'); } }catch(e){ toast('변경 실패'); } }
+$('swP').onclick=()=>setTabs(!settings.practice_open, settings.report_open, settings.wall_open);
+$('swR').onclick=()=>setTabs(settings.practice_open, !settings.report_open, settings.wall_open);
+$('swW').onclick=()=>setTabs(settings.practice_open, settings.report_open, !settings.wall_open);
 document.querySelectorAll('.t-nav button').forEach(b=>b.onclick=()=>showTView(b.dataset.tv));
-function showTView(v){ tView=v; document.querySelectorAll('.t-nav button').forEach(b=>b.classList.toggle('active',b.dataset.tv===v)); ['wall','prog','nick'].forEach(k=>$('tv-'+k).classList.toggle('hidden',k!==v)); refreshT(); }
-function refreshT(){ if(!tpw) return; if(tView==='wall') loadTWall(); else loadTStudents(); }
+function showTView(v){ tView=v; document.querySelectorAll('.t-nav button').forEach(b=>b.classList.toggle('active',b.dataset.tv===v)); ['wall','prog','nick','report'].forEach(k=>$('tv-'+k).classList.toggle('hidden',k!==v)); refreshT(); }
+function refreshT(){ if(!tpw) return; if(tView==='wall') loadTWall(); else if(tView==='report') loadTReports(); else loadTStudents(); }
 
+let trClass='all';
+async function loadTReports(){
+  let rows=[]; try{ rows=await rpc('elastic_teacher_reports',{p_pw:tpw})||[]; }catch(e){ return; }
+  renderClassChips($('rClsChips'), rows, trClass, v=>{ trClass=v; loadTReports(); }, '1');
+  const list=rows.filter(r=>trClass==='all'||r.class_no===trClass);
+  const box=$('tReports'); box.innerHTML='';
+  if(!list.length){ box.append(el('div',{class:'empty',text:'아직 올라온 실험 답이 없어요.'})); return; }
+  list.forEach(r=>{ const img=el('img',{alt:'학생 답 사진'}); getImage(r.image_id).then(u=>{ if(u) img.src=u; }); img.onclick=()=>{ if(img.src) zoomImg(img.src); };
+    const card=el('div',{class:'trep'}, img, el('div',null, el('div',{class:'who',text:`${classLabel(r.class_no)} · ${r.student_id} · ${r.nickname}`}), el('div',{class:'hint-s',text:new Date(r.created_at).toLocaleString('ko-KR')}), fbCard(r.feedback,{noNote:true})),
+      el('button',{class:'del',text:'🗑 삭제',onclick:async()=>{ const ok=await dialog({title:'실험 답 삭제',message:`${r.student_id} (${r.nickname})의 실험 답을 지울까요? 지우면 학생이 1번 더 올릴 수 있어요.`,okText:'삭제',danger:true}); if(ok){ await rpc('elastic_teacher_delete_report',{p_pw:tpw,p_report:r.id}); loadTReports(); } }}));
+    box.append(card); });
+}
 async function loadTWall(){
   try{ tPosts=await rpc('elastic_teacher_posts',{p_pw:tpw})||[]; }catch(e){ $('tWallMsg').textContent='불러오기 오류'; return; }
   renderClassChips($('clsChips'), tPosts, tClass, v=>{ tClass=v; loadTWall(); }, '1');
@@ -929,9 +1096,9 @@ async function loadTStudents(){
     Object.keys(groups).sort().forEach(cn=>{
       const g=groups[cn], done=g.filter(r=>r.solved>=SCN.length).length;
       box.append(el('h2',{text:`${classLabel(cn)} — ${SCN.length}문제 모두 맞힌 학생 ${done}/${g.length}명`,style:"font-family:Jua,sans-serif;font-weight:400"}));
-      const tb=el('table'); tb.append(el('tr',null,el('th',{text:'학번'}),el('th',{text:'닉네임'}),el('th',{text:'맞힌 문제'}),el('th',{text:'진행'}),el('th',{text:'시도 횟수'}),el('th',{text:'올린 사례'})));
+      const tb=el('table'); tb.append(el('tr',null,el('th',{text:'학번'}),el('th',{text:'닉네임'}),el('th',{text:'맞힌 문제'}),el('th',{text:'진행'}),el('th',{text:'시도 횟수'}),el('th',{text:'실험 답'}),el('th',{text:'올린 사례'})));
       g.forEach(r=>{ const bar=el('div',{class:'bar'}); bar.append(el('i',{style:`width:${Math.round(r.solved/SCN.length*100)}%`}));
-        tb.append(el('tr',null,el('td',{text:r.student_id}),el('td',{text:r.nickname}),el('td',{text:`${r.solved}/${SCN.length}`}),el('td',null,bar),el('td',{text:String(r.tries)}),el('td',{text:String(r.posts)}))); });
+        tb.append(el('tr',null,el('td',{text:r.student_id}),el('td',{text:r.nickname}),el('td',{text:`${r.solved}/${SCN.length}`}),el('td',null,bar),el('td',{text:String(r.tries)}),el('td',{text:(r.reports||0)+'/3'}),el('td',{text:String(r.posts)}))); });
       box.append(tb);
     });
   } else {
