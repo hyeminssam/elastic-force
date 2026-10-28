@@ -109,9 +109,10 @@ main{flex:1;max-width:1240px;width:100%;margin:0 auto;padding:0 20px 20px}
 /* teacher */
 #teacher{position:fixed;inset:0;background:var(--bg);z-index:45;overflow:auto}
 .t-top{background:#1f2a44;color:#fff;padding:14px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:2}
-.t-top h1{font-family:'Jua',sans-serif;font-weight:400;font-size:28px;margin:0;flex:1}
+.t-top h1{white-space:nowrap;font-family:'Jua',sans-serif;font-weight:400;font-size:28px;margin:0;flex:1}
 .switch{background:#334155;color:#fff;font-size:18px}
 .switch.on{background:var(--ok)}
+.switch.pubsw{background:#475569;font-size:16px}.switch.pubsw.on{background:#2563eb}
 .t-nav{display:flex;gap:10px;padding:16px 20px 0;flex-wrap:wrap}
 .t-nav button{background:#e2e8f0;color:#334155}
 .t-nav button.active{background:var(--pri);color:#fff}
@@ -186,8 +187,8 @@ footer{text-align:center;color:#8390ad;font-size:12px;padding:14px 20px 20px;lin
     <div id="entryMsg" class="fb bad hidden"></div>
     <div class="acts"><button class="btn-pri" id="entryBtn" style="width:100%;font-size:22px">입장하기</button></div>
     <div id="pubEntry" class="hidden" style="margin-top:14px;border-top:2px dashed var(--line);padding-top:14px">
-      <button class="btn-sub" id="pubBtn" style="width:100%;font-size:20px">👀 로그인 없이 담벼락 구경하기</button>
-      <div style="font-size:15px;color:var(--sub);margin-top:6px;text-align:center">보기만 할 수 있어요. 사례를 올리려면 입장해야 해요.</div>
+      <button class="btn-sub" id="pubBtn" style="width:100%;font-size:20px">👀 로그인 없이 둘러보기</button>
+      <div style="font-size:15px;color:var(--sub);margin-top:6px;text-align:center">선생님이 열어 둔 활동만 볼 수 있어요. 기록은 저장되지 않고, 사례를 올리려면 입장해야 해요.</div>
     </div>
   </div>
 </div>
@@ -325,7 +326,8 @@ footer{text-align:center;color:#8390ad;font-size:12px;padding:14px 20px 20px;lin
     <button class="switch" id="swP">① 방향 찾기: -</button>
     <button class="switch" id="swR">② 실험 답: -</button>
     <button class="switch" id="swW">③ 담벼락: -</button>
-    <button class="switch" id="swPub">👀 로그인 없이 보기: -</button>
+    <button class="switch pubsw" id="swPubP">👀 ① 로그인 없이: -</button>
+    <button class="switch pubsw" id="swPubW">👀 ③ 로그인 없이: -</button>
     <button class="btn-sub" id="tClose">학생 화면으로</button>
   </div>
   <div class="t-nav">
@@ -369,7 +371,7 @@ const LS = 'elastic_user_v1';
 function lsGet(){ try { return JSON.parse(localStorage.getItem(LS) || 'null'); } catch(e){ return null; } }
 function lsSet(v){ try { localStorage.setItem(LS, JSON.stringify(v)); } catch(e){} }
 let me = null;
-let settings = { practice_open: true, report_open: false, wall_open: false, public_wall: false };
+let settings = { practice_open: true, report_open: false, wall_open: false, public_wall: false, pub_practice: false };
 let publicMode=false;   // 로그인 없이 보기 중인지
 let curTab = 'practice';
 
@@ -461,7 +463,7 @@ async function boot(){
   }catch(e){ me=saved; startApp(null); toast('서버 연결을 확인해 주세요.'); }
 }
 
-let started=false;
+let started=false, loopOn=false;
 function startApp(pending){
   $('meChip').textContent = `${classLabel(me.id.slice(0,3))} ${parseInt(me.id.slice(3),10)}번 · ${me.nick}`;
   if(pending) toast(`닉네임 변경 요청(“${pending}”)을 선생님이 확인 중이에요.`, 3500);
@@ -469,7 +471,7 @@ function startApp(pending){
   startPolling();
   loadProgress();
   renderScene();
-  requestAnimationFrame(loop);
+  if(!loopOn){ loopOn=true; requestAnimationFrame(loop); }
 }
 
 $('nickReqBtn').onclick = async ()=>{
@@ -484,7 +486,14 @@ $('nickReqBtn').onclick = async ()=>{
 
 /* ================= 탭 / 설정 ================= */
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{ curTab=b.dataset.tab; applyTabs(); if(curTab==='wall') loadWall(); if(curTab==='report') loadReports(); });
+/* 로그인 없이 보기: 지금 이 기기에서 각 탭이 보이는지 */
+function canPractice(){ return publicMode ? settings.pub_practice : settings.practice_open; }
+function canWallView(){ return publicMode ? settings.public_wall : (settings.wall_open || settings.public_wall); }
 function applyTabs(){
+  if(publicMode){
+    const ok={practice:settings.pub_practice, wall:settings.public_wall, report:false};
+    if(!ok[curTab]){ const n=['practice','wall'].find(t=>ok[t]); if(n){ curTab=n; if(n==='wall') loadWall(); } }
+  }
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===curTab));
   $('tab-practice').classList.toggle('hidden', curTab!=='practice');
   $('tab-wall').classList.toggle('hidden', curTab!=='wall');
@@ -492,16 +501,17 @@ function applyTabs(){
   $('lockR').textContent = settings.report_open?'':'🔒';
   $('rLocked').classList.toggle('hidden', settings.report_open);
   $('rBody').classList.toggle('hidden', !settings.report_open);
-  $('lockP').textContent = settings.practice_open?'':'🔒';
+  $('lockP').textContent = canPractice()?'':'🔒';
   $('lockW').textContent = settings.wall_open?'':(settings.public_wall?'👀':'🔒');
-  $('pLocked').classList.toggle('hidden', settings.practice_open);
-  $('pBody').classList.toggle('hidden', !settings.practice_open);
-  const wallView = settings.wall_open || settings.public_wall;
+  $('pLocked').classList.toggle('hidden', canPractice());
+  $('pBody').classList.toggle('hidden', !canPractice());
+  const wallView = canWallView();
   $('wLocked').classList.toggle('hidden', wallView);
   $('wBody').classList.toggle('hidden', !wallView);
   $('wForm').classList.toggle('hidden', !settings.wall_open || publicMode);
-  $('pubEntry').classList.toggle('hidden', !settings.public_wall);
-  if(publicMode){ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('hidden', b.dataset.tab!=='wall')); }
+  $('pubEntry').classList.toggle('hidden', !(settings.public_wall || settings.pub_practice));
+  if(publicMode){ const ok={practice:settings.pub_practice, wall:settings.public_wall, report:false};
+    document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('hidden', !ok[b.dataset.tab])); }
 }
 let pollOk=false, pollFail=0;
 async function pollSettings(){
@@ -512,8 +522,11 @@ async function pollSettings(){
       const wasWall = settings.wall_open, wasReport = settings.report_open;
       const changed = data.practice_open!==settings.practice_open || data.report_open!==settings.report_open || data.wall_open!==settings.wall_open;
       const wasPub = settings.public_wall;
-      settings={practice_open:!!data.practice_open, report_open:!!data.report_open, wall_open:!!data.wall_open, public_wall:!!data.public_wall}; applyTabs(); updateSwitches();
-      if(publicMode && !settings.public_wall){ toast('로그인 없이 보기가 끝났어요. 입장해 주세요.',3500); setTimeout(()=>location.reload(),1500); return; }
+      const wasPP = settings.pub_practice;
+      settings={practice_open:!!data.practice_open, report_open:!!data.report_open, wall_open:!!data.wall_open, public_wall:!!data.public_wall, pub_practice:!!data.pub_practice}; applyTabs(); updateSwitches();
+      if(publicMode && wasPub && !settings.public_wall && settings.pub_practice) toast('선생님이 담벼락 보기를 닫았어요.');
+      if(publicMode && wasPP && !settings.pub_practice && settings.public_wall) toast('선생님이 방향 찾기 보기를 닫았어요.');
+      if(publicMode && !settings.public_wall && !settings.pub_practice){ toast('로그인 없이 보기가 끝났어요. 입장해 주세요.',3500); setTimeout(()=>location.reload(),1500); return; }
       if(!wasPub && settings.public_wall && curTab==='wall') loadWall();
       if(!wasWall && data.wall_open && curTab==='wall') loadWall();
       if(!wasReport && data.report_open && curTab==='report') loadReports();
@@ -830,7 +843,7 @@ function check(tip){
 }
 function showBadMsg(a){ const s=SCN[idx], tol=s.tol||30; const fb=$('fb'); fb.className='fb bad';
   fb.innerHTML = angDiff(a,s.ang+180)<=tol ? `❌ 그 방향은 <b>${s.hint}</b>의 방향이에요.<br>탄성력은 변형시킨 힘과 <b>반대</b> 방향으로 작용해요!` : '❌ 다시 생각해 봐요. 물체가 <b>어느 쪽으로 변형</b>되었는지, 원래 모양으로 돌아가려면 <b>어느 쪽</b>으로 힘을 줘야 하는지 생각해 보세요.'; }
-async function saveResult(key, ok){ try{ await rpc('elastic_save_practice',{p_id:me.id,p_nick:me.nick,p_scn:key,p_correct:ok}); }catch(e){} }
+async function saveResult(key, ok){ if(!me) return; try{ await rpc('elastic_save_practice',{p_id:me.id,p_nick:me.nick,p_scn:key,p_correct:ok}); }catch(e){} }
 
 $('bRetry').onclick=()=>{ const st=state[idx]; if(st.solved||st.revealed) { toast('이미 끝난 문제예요. 다음 문제로 가 볼까요?'); return; } st.last=null; drag=null; renderScene(); };
 $('bHint').onclick=()=>{ state[idx].showHint=true; toast('주황색 점선 화살표는 물체를 변형시킨 힘이에요.'); };
@@ -840,7 +853,7 @@ $('bPrev').onclick=()=>{ if(idx>0){ idx--; drag=null; anim=null; renderScene(); 
 $('bNext').onclick=()=>{ idx=(idx+1)%SCN.length; drag=null; anim=null; renderScene(); };
 
 function loop(t){
-  if(curTab==='practice' && settings.practice_open) drawFrame(t);
+  if(curTab==='practice' && canPractice()) drawFrame(t);
   requestAnimationFrame(loop);
 }
 function drawFrame(t){
@@ -1018,12 +1031,13 @@ async function loadPublicWall(){
   }catch(e){ $('wallMsg').textContent='불러오기 오류: '+(e.message||e); }
 }
 function enterPublic(){
-  publicMode=true; curTab='wall';
+  publicMode=true; curTab = settings.pub_practice ? 'practice' : 'wall';
   $('entry').classList.add('hidden');
   $('meChip').textContent='👀 보기 전용';
   $('nickReqBtn').classList.add('hidden'); $('loginBtn').classList.remove('hidden');
   if(!$('pubNote')) $('wBody').prepend(el('div',{id:'pubNote',class:'tip-box',text:'👀 보기 전용 화면이에요. 우리 학교 친구들의 사례이니, 다른 학교 친구에게 주소를 공유하지 말아 주세요.'}));
-  applyTabs(); loadWall();
+  applyTabs(); if(curTab==='wall') loadWall();
+  if(!loopOn){ loopOn=true; renderScene(); requestAnimationFrame(loop); }
 }
 $('pubBtn').onclick=enterPublic;
 $('loginBtn').onclick=()=>{ location.reload(); };
@@ -1124,18 +1138,23 @@ $('tClose').onclick=()=>{ $('teacher').classList.add('hidden'); tpw=null; clearI
 function updateSwitches(){
   $('swP').textContent='① 방향 찾기: '+(settings.practice_open?'열림 ✅':'닫힘 🔒'); $('swP').classList.toggle('on',settings.practice_open);
   $('swR').textContent='② 실험 답: '+(settings.report_open?'열림 ✅':'닫힘 🔒'); $('swR').classList.toggle('on',settings.report_open);
-  $('swPub').textContent='👀 로그인 없이 보기: '+(settings.public_wall?'켜짐 ✅':'꺼짐'); $('swPub').classList.toggle('on',settings.public_wall);
+  $('swPubP').textContent='👀 ① 로그인 없이: '+(settings.pub_practice?'켜짐':'꺼짐'); $('swPubP').classList.toggle('on',settings.pub_practice);
+  $('swPubW').textContent='👀 ③ 로그인 없이: '+(settings.public_wall?'켜짐':'꺼짐'); $('swPubW').classList.toggle('on',settings.public_wall);
   $('swW').textContent='③ 담벼락: '+(settings.wall_open?'열림 ✅':'닫힘 🔒'); $('swW').classList.toggle('on',settings.wall_open);
 }
 async function setTabs(p,r,w){ try{ const ok=await rpc('elastic_teacher_tabs',{p_pw:tpw,p_practice:p,p_report:r,p_wall:w}); if(ok){ settings={practice_open:p,report_open:r,wall_open:w}; updateSwitches(); applyTabs(); toast('학생 화면에 곧 반영돼요.'); } }catch(e){ toast('변경 실패'); } }
 $('swP').onclick=()=>setTabs(!settings.practice_open, settings.report_open, settings.wall_open);
 $('swR').onclick=()=>setTabs(settings.practice_open, !settings.report_open, settings.wall_open);
 $('swW').onclick=()=>setTabs(settings.practice_open, settings.report_open, !settings.wall_open);
-$('swPub').onclick=async ()=>{
-  const on=!settings.public_wall;
-  if(on){ const ok=await dialog({title:'로그인 없이 보기 켜기',message:'주소를 아는 사람은 누구나 입장하지 않고 담벼락(전체 반 사례·사진·닉네임)을 볼 수 있어요. 글은 올릴 수 없어요. 켤까요?',okText:'켜기'}); if(!ok) return; }
-  try{ const r=await rpc('elastic_teacher_public',{p_pw:tpw,p_on:on}); if(r){ settings.public_wall=on; updateSwitches(); applyTabs(); toast(on?'로그인 없이 담벼락을 볼 수 있어요.':'로그인 없이 보기를 껐어요.'); } else toast('변경 실패'); }catch(e){ toast('변경 실패 — setup.sql을 다시 실행했는지 확인해 주세요.'); }
-};
+async function setPub(tab){
+  const key = tab==='practice' ? 'pub_practice' : 'public_wall', on = !settings[key];
+  const what = tab==='practice' ? '① 탄성력 방향 찾기 (기록은 저장되지 않음)' : '③ 사례 담벼락 (모든 반 사례·사진·닉네임, 글은 못 올림)';
+  if(on){ const ok=await dialog({title:'로그인 없이 보기 켜기',message:`주소를 아는 사람은 누구나 입장하지 않고 ${what}을(를) 볼 수 있어요. 켤까요?`,okText:'켜기'}); if(!ok) return; }
+  try{ const r=await rpc('elastic_teacher_pub',{p_pw:tpw,p_tab:tab,p_on:on}); if(r){ settings[key]=on; updateSwitches(); applyTabs(); toast(on?'로그인 없이 보기를 켰어요.':'로그인 없이 보기를 껐어요.'); } else toast('변경 실패'); }
+  catch(e){ toast('변경 실패 — setup.sql을 다시 실행했는지 확인해 주세요.'); }
+}
+$('swPubP').onclick=()=>setPub('practice');
+$('swPubW').onclick=()=>setPub('wall');
 document.querySelectorAll('.t-nav button').forEach(b=>b.onclick=()=>showTView(b.dataset.tv));
 function showTView(v){ tView=v; document.querySelectorAll('.t-nav button').forEach(b=>b.classList.toggle('active',b.dataset.tv===v)); ['wall','prog','nick','report'].forEach(k=>$('tv-'+k).classList.toggle('hidden',k!==v)); refreshT(); }
 function refreshT(){ if(!tpw) return; if(tView==='wall') loadTWall(); else if(tView==='report') loadTReports(); else loadTStudents(); }
