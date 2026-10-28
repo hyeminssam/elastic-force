@@ -161,6 +161,13 @@ th{background:#eef2ff}
 .trep .del{position:absolute;top:10px;right:10px;background:rgba(225,29,72,.92);color:#fff;font-size:15px;padding:6px 12px}
 .readwrap{margin-top:10px;font-size:16px}.readwrap summary{cursor:pointer;color:var(--sub);font-weight:700}
 .readtab{margin:8px 0 0;box-shadow:none;border:1px solid var(--line)}.readtab th,.readtab td{padding:6px 8px;font-size:16px;text-align:center}.readtab td.unc{background:#e0e7ff;font-weight:900}
+.vnav{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:10px}
+.vnav .arrow{width:56px;height:56px;border-radius:50%;font-size:24px;padding:0;background:var(--pri);color:#fff}
+.vnav .arrow:disabled{background:#cbd5e1;color:#fff}
+.vnav .vlabel{font-weight:700;font-size:17px;min-width:150px;text-align:center}
+.sortbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;font-weight:700;color:var(--sub)}
+.sortbar button{background:#fff;border:2px solid var(--line);color:var(--ink);font-size:17px;padding:8px 14px}
+.sortbar button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
 .trep .who{font-weight:900;font-size:20px;margin-bottom:6px}
 footer{text-align:center;color:#8390ad;font-size:12px;padding:14px 20px 20px;line-height:1.6}
 </style>
@@ -1088,17 +1095,42 @@ document.querySelectorAll('.t-nav button').forEach(b=>b.onclick=()=>showTView(b.
 function showTView(v){ tView=v; document.querySelectorAll('.t-nav button').forEach(b=>b.classList.toggle('active',b.dataset.tv===v)); ['wall','prog','nick','report'].forEach(k=>$('tv-'+k).classList.toggle('hidden',k!==v)); refreshT(); }
 function refreshT(){ if(!tpw) return; if(tView==='wall') loadTWall(); else if(tView==='report') loadTReports(); else loadTStudents(); }
 
-let trClass='all';
+let trClass='all', trSort='recent'; const trSel={};   // trSel: 학생별로 지금 보고 있는 제출(id)
 async function loadTReports(){
   let rows=[]; try{ rows=await rpc('elastic_teacher_reports',{p_pw:tpw})||[]; }catch(e){ return; }
-  renderClassChips($('rClsChips'), rows, trClass, v=>{ trClass=v; loadTReports(); }, '1');
-  const list=rows.filter(r=>trClass==='all'||r.class_no===trClass);
+  // 학생별로 묶기 — 각 학생 안에서는 최근 제출이 맨 앞
+  const by={};
+  rows.forEach(r=>{ (by[r.student_id]=by[r.student_id]||[]).push(r); });
+  let studs=Object.keys(by).map(id=>{ const list=by[id].sort((x,y)=>new Date(y.created_at)-new Date(x.created_at)); return {id, list, latest:list[0]}; });
+  renderClassChips($('rClsChips'), studs.map(t=>t.latest), trClass, v=>{ trClass=v; loadTReports(); }, '1');
+  studs=studs.filter(t=>trClass==='all'||t.latest.class_no===trClass);
+  studs.sort(trSort==='recent' ? (x,y)=>new Date(y.latest.created_at)-new Date(x.latest.created_at) : (x,y)=>x.id.localeCompare(y.id));
   const box=$('tReports'); box.innerHTML='';
-  if(!list.length){ box.append(el('div',{class:'empty',text:'아직 올라온 실험 답이 없어요.'})); return; }
-  list.forEach(r=>{ const img=el('img',{alt:'학생 답 사진'}); getImage(r.image_id).then(u=>{ if(u) img.src=u; }); img.onclick=()=>{ if(img.src) zoomImg(img.src); };
-    const card=el('div',{class:'trep'}, img, el('div',null, el('div',{class:'who',text:`${classLabel(r.class_no)} · ${r.student_id} · ${r.nickname}`}), el('div',{class:'hint-s',text:new Date(r.created_at).toLocaleString('ko-KR')}), fbCard(r.feedback,{noNote:true}), readTable(r.feedback)),
-      el('button',{class:'del',text:'🗑 삭제',onclick:async()=>{ const ok=await dialog({title:'실험 답 삭제',message:`${r.student_id} (${r.nickname})의 실험 답을 지울까요? 지우면 학생이 1번 더 올릴 수 있어요.`,okText:'삭제',danger:true}); if(ok){ await rpc('elastic_teacher_delete_report',{p_pw:tpw,p_report:r.id}); loadTReports(); } }}));
-    box.append(card); });
+  box.append(el('div',{class:'sortbar'}, el('span',{text:`학생 ${studs.length}명 · 정렬:`}),
+    el('button',{class:trSort==='recent'?'active':'',text:'🕒 최근 올린 순',onclick:()=>{ trSort='recent'; loadTReports(); }}),
+    el('button',{class:trSort==='id'?'active':'',text:'🔢 학번 순',onclick:()=>{ trSort='id'; loadTReports(); }})));
+  if(!studs.length){ box.append(el('div',{class:'empty',text:'아직 올라온 실험 답이 없어요.'})); return; }
+  studs.forEach(t=>box.append(studentCard(t)));
+}
+function studentCard(t){
+  const card=el('div',{class:'trep'});
+  let i=Math.max(0, t.list.findIndex(r=>r.id===trSel[t.id]));
+  const draw=()=>{
+    const r=t.list[i]; trSel[t.id]=r.id; card.innerHTML='';
+    const img=el('img',{alt:'학생 답 사진'}); getImage(r.image_id).then(u=>{ if(u && trSel[t.id]===r.id) img.src=u; }); img.onclick=()=>{ if(img.src) zoomImg(img.src); };
+    const n=t.list.length;
+    const nav=el('div',{class:'vnav'},
+      el('button',{class:'arrow',text:'◀',title:'더 최근 것',disabled:i===0?'':null,onclick:()=>{ if(i>0){ i--; draw(); } }}),
+      el('span',{class:'vlabel',text:n>1?`${n-i}번째 제출 (${i===0?'가장 최근':'이전 것'}) · ${i+1}/${n}`:'1번째 제출'}),
+      el('button',{class:'arrow',text:'▶',title:'이전 것',disabled:i===n-1?'':null,onclick:()=>{ if(i<n-1){ i++; draw(); } }}));
+    const ar=nav.querySelectorAll('.arrow'); ar[0].disabled=(i===0); ar[1].disabled=(i===n-1);
+    if(n===1) ar.forEach(b=>b.style.visibility='hidden');
+    card.append(el('div',null,img,nav),
+      el('div',null, el('div',{class:'who',text:`${classLabel(r.class_no)} · ${r.student_id} · ${r.nickname}`}),
+        el('div',{class:'hint-s',text:new Date(r.created_at).toLocaleString('ko-KR')}), fbCard(r.feedback,{noNote:true}), readTable(r.feedback)),
+      el('button',{class:'del',text:'🗑 이 제출 삭제',onclick:async()=>{ const ok=await dialog({title:'실험 답 삭제',message:`${r.student_id} (${r.nickname})의 ${n-i}번째 제출을 지울까요? 지우면 학생이 1번 더 올릴 수 있어요.`,okText:'삭제',danger:true}); if(ok){ await rpc('elastic_teacher_delete_report',{p_pw:tpw,p_report:r.id}); delete trSel[t.id]; loadTReports(); } }}));
+  };
+  draw(); return card;
 }
 async function loadTWall(){
   try{ tPosts=await rpc('elastic_teacher_posts',{p_pw:tpw})||[]; }catch(e){ $('tWallMsg').textContent='불러오기 오류'; return; }
